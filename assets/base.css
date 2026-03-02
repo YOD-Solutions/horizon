@@ -2428,6 +2428,33 @@ deferred-media[class] :is(.deferred-media__poster-button img, .deferred-media__p
   z-index: 2;
 }
 
+.variant-option__button-label--with-price {
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  white-space: normal;
+  min-height: 4.5em;
+}
+
+.variant-option__button-label--with-price .variant-option__button-label__text,
+.variant-option__button-label--with-price .variant-option__button-label__price {
+  display: block;
+  max-width: 100%;
+}
+
+.variant-option__button-label__price {
+  pointer-events: none;
+  z-index: 2;
+  font-size: var(--font-size--2xs);
+  line-height: 1.2;
+  color: rgb(var(--color-variant-text-rgb) / var(--opacity-subdued-text));
+}
+
+.variant-option__button-label:has(:checked) .variant-option__button-label__price {
+  color: inherit;
+}
+
 .variant-option--equal-width-buttons {
   --variant-min-width: clamp(44px, calc(var(--variant-option-padding-inline) * 2 + var(--variant-ch)), 100%);
 
@@ -2441,6 +2468,14 @@ deferred-media[class] :is(.deferred-media__poster-button img, .deferred-media__p
   .variant-option__button-label__text {
     text-align: center;
     text-wrap: balance;
+  }
+
+  .variant-option__button-label--with-price {
+    align-items: center;
+  }
+
+  .variant-option__button-label--with-price .variant-option__button-label__price {
+    text-align: center;
   }
 }
 

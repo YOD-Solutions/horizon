@@ -68,6 +68,13 @@
           </div>
         {%- elsif variant_style == 'swatch' or block_settings.variant_style == 'buttons' -%}
           {%- assign fieldset_index = forloop.index0 -%}
+          {%- liquid
+            assign show_option_value_price = false
+            assign option_name = product_option.name | downcase
+            if variant_style != 'swatch' and option_name contains 'size'
+              assign show_option_value_price = true
+            endif
+          -%}
           <fieldset
             class="variant-option variant-option--buttons{% if variant_style == 'swatch' %} variant-option--swatches{% else %} variant-option--{{ settings.variant_button_width }}{% endif %}"
             data-fieldset-index="{{ fieldset_index }}"
@@ -85,7 +92,7 @@
                 {% assign longest_value = product_option_value.size %}
               {% endif %}
               <label
-                class="variant-option__button-label{% if variant_style == 'swatch' %} variant-option__button-label--has-swatch{% endif %}"
+                class="variant-option__button-label{% if variant_style == 'swatch' %} variant-option__button-label--has-swatch{% endif %}{% if show_option_value_price %} variant-option__button-label--with-price{% endif %}"
               >
                 <input
                   type="radio"
@@ -141,6 +148,11 @@
                   >
                     {{- product_option_value | escape -}}
                   </span>
+                  {%- if show_option_value_price and product_option_value.variant != blank -%}
+                    <span class="variant-option__button-label__price">
+                      {%- render 'format-price', price: product_option_value.variant.price -%}
+                    </span>
+                  {%- endif -%}
                 {% endif %}
                 {% render 'strikethrough-variant', product_option: product_option_value %}
               </label>
