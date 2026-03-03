@@ -1,27 +1,50 @@
 {% liquid
-  assign block_settings = block.settings
-  assign product = closest.product
-  assign model_info = product.metafields.models.model_info
+  assign product_resource = closest.product
+  assign model_info_reference = product_resource.metafields.models.model_info
+  assign model_info = blank
+
+  if model_info_reference != blank
+    assign model_info = model_info_reference.value
+  endif
+
+  assign model_name = blank
+  assign model_height = blank
+  assign model_bust = blank
+  assign model_waist = blank
+  assign model_hips = blank
+
+  if model_info != blank
+    assign model_name = model_info.name.value | default: model_info.name
+    assign model_height = model_info.height.value | default: model_info.height
+    assign model_bust = model_info.bust.value | default: model_info.bust
+    assign model_waist = model_info.waist.value | default: model_info.waist
+    assign model_hips = model_info.hips.value | default: model_info.hips
+  endif
 %}
 
-<div class="model-info">
-  <h2 class="model-info__name">{{ block_settings.model_name }}</h2>
-  <p class="model-info__description">{{ block_settings.model_description }}</p>
-  {% if model_info != blank %}
-    <p class="model-info__details">{{ model_info }}</p>
-  {% endif %}
-</div>
+{% if model_info != blank %}
+  <div class="model-info" {{ block.shopify_attributes }}>
+    {% if model_name != blank %}
+      <p class="model-info__name">{{ model_name | escape }}</p>
+    {% endif %}
+    {% if model_height != blank %}
+      <p class="model-info__row">Height: {{ model_height | escape }}</p>
+    {% endif %}
+    {% if model_bust != blank %}
+      <p class="model-info__row">Bust: {{ model_bust | escape }}</p>
+    {% endif %}
+    {% if model_waist != blank %}
+      <p class="model-info__row">Waist: {{ model_waist | escape }}</p>
+    {% endif %}
+    {% if model_hips != blank %}
+      <p class="model-info__row">Hips: {{ model_hips | escape }}</p>
+    {% endif %}
+  </div>
+{% endif %}
 
 {% schema %}
 {
   "name": "Model Info",
-  "settings": [
-    {
-      "type": "text",
-      "id": "model_name",
-      "label": "Model Name",
-      "default": "Model Name"
-    }
-  ]
+  "settings": []
 }
 {% endschema %}
