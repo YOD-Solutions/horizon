@@ -1,6 +1,7 @@
 {% liquid
   assign product_resource = closest.product
   assign model_info_reference = product_resource.metafields.models.model_info
+  assign model_size = product_resource.metafields.model.wearing_size
   assign model_info = blank
 
   if model_info_reference != blank
@@ -25,20 +26,23 @@
 {% if model_info != blank %}
   <div class="model-info" {{ block.shopify_attributes }}>
     {% if model_name != blank %}
-      <p class="model-info__name">{{ model_name | escape }}</p>
+      <p class="model-info__name">
+        {{ model_name | escape }} is {{ model_height | escape }} ft and wearing size {{ model_size | escape }}
+      </p>
     {% endif %}
-    {% if model_height != blank %}
-      <p class="model-info__row">Height: {{ model_height | escape }}</p>
-    {% endif %}
-    {% if model_bust != blank %}
-      <p class="model-info__row">Bust: {{ model_bust | escape }}</p>
-    {% endif %}
-    {% if model_waist != blank %}
-      <p class="model-info__row">Waist: {{ model_waist | escape }}</p>
-    {% endif %}
-    {% if model_hips != blank %}
-      <p class="model-info__row">Hips: {{ model_hips | escape }}</p>
-    {% endif %}
+
+    <p class="model-info__row">{{ model_name | escape }}'s measurements:</p>
+    <u>
+      {% if model_bust != blank %}
+        <li class="model-info__row">Bust: {{ model_bust | escape }}</li>
+      {% endif %}
+      {% if model_waist != blank %}
+        <li class="model-info__row">Waist: {{ model_waist | escape }}</li>
+      {% endif %}
+      {% if model_hips != blank %}
+        <li class="model-info__row">Hips: {{ model_hips | escape }}</li>
+      {% endif %}
+    </u>
   </div>
 {% endif %}
 
