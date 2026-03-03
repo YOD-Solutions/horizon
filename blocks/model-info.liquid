@@ -26,25 +26,93 @@
 {% if model_info != blank %}
   <div class="model-info" {{ block.shopify_attributes }}>
     {% if model_name != blank %}
-      <p class="model-info__name">
+      <p class="model-info__summary">
         {{ model_name | escape }} is {{ model_height | escape }} ft and wearing size {{ model_size | escape }}
       </p>
     {% endif %}
 
-    <p class="model-info__row">{{ model_name | escape }}'s measurements:</p>
-    <u>
+    {% if model_name != blank %}
+      <p class="model-info__heading">{{ model_name | escape }}'s measurements</p>
+    {% else %}
+      <p class="model-info__heading">Measurements</p>
+    {% endif %}
+
+    <ul class="model-info__list">
       {% if model_bust != blank %}
-        <li class="model-info__row">Bust: {{ model_bust | escape }}</li>
+        <li class="model-info__item">
+          <span class="model-info__label">Bust</span>
+          <span class="model-info__value">{{ model_bust | escape }}</span>
+        </li>
       {% endif %}
       {% if model_waist != blank %}
-        <li class="model-info__row">Waist: {{ model_waist | escape }}</li>
+        <li class="model-info__item">
+          <span class="model-info__label">Waist</span>
+          <span class="model-info__value">{{ model_waist | escape }}</span>
+        </li>
       {% endif %}
       {% if model_hips != blank %}
-        <li class="model-info__row">Hips: {{ model_hips | escape }}</li>
+        <li class="model-info__item">
+          <span class="model-info__label">Hips</span>
+          <span class="model-info__value">{{ model_hips | escape }}</span>
+        </li>
       {% endif %}
-    </u>
+    </ul>
   </div>
 {% endif %}
+
+{% stylesheet %}
+  .model-info {
+    background-color: rgb(var(--color-foreground-rgb) / 0.02);
+    border: 1px solid rgb(var(--color-foreground-rgb) / 0.1);
+    border-radius: var(--style-border-radius-inputs);
+    padding: var(--padding-md);
+    display: grid;
+    gap: var(--gap-xs);
+  }
+
+  .model-info__summary {
+    margin: 0;
+    font-size: var(--font-paragraph-small--size);
+    color: rgb(var(--color-foreground-rgb) / var(--opacity-subdued-text));
+    line-height: var(--font-paragraph--line-height);
+  }
+
+  .model-info__heading {
+    margin: 0;
+    font-size: var(--font-paragraph-medium--size);
+    font-weight: var(--font-paragraph--weight-bold);
+    line-height: var(--font-paragraph--line-height);
+    padding-top: var(--padding-2xs);
+  }
+
+  .model-info__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0;
+  }
+
+  .model-info__item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--gap-sm);
+    align-items: baseline;
+    padding-block: var(--padding-2xs);
+    border-top: 1px solid rgb(var(--color-foreground-rgb) / 0.08);
+  }
+
+  .model-info__label {
+    font-size: var(--font-paragraph-small--size);
+    color: rgb(var(--color-foreground-rgb) / var(--opacity-subdued-text));
+  }
+
+  .model-info__value {
+    font-size: var(--font-paragraph--size);
+    font-weight: var(--font-weight-medium);
+    text-align: right;
+  }
+{% endstylesheet %}
 
 {% schema %}
 {
