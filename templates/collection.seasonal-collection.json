@@ -100,34 +100,6 @@
     },
     "call-to-action": {
       "type": "call-to-action",
-      "blocks": {
-        "button_9n7s8X": {
-          "type": "button",
-          "settings": {
-            "link": {
-              "type": "collection",
-              "value": ""
-            },
-            "style": "primary",
-            "size": "medium",
-            "width": "auto",
-            "alignment": "left",
-            "font": "var(--font-primary--family)",
-            "font_size": "",
-            "line_height": "normal",
-            "letter_spacing": "normal",
-            "case": "none",
-            "color_scheme": "",
-            "padding_block_start": 12,
-            "padding_block_end": 12,
-            "padding_inline_start": 24,
-            "padding_inline_end": 24
-          }
-        }
-      },
-      "block_order": [
-        "button_9n7s8X"
-      ],
       "name": "Call to action",
       "settings": {
         "content_direction": "row",
