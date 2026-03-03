@@ -298,6 +298,7 @@
   },
   "order": [
     "section",
+    "call-to-action",
     "main"
   ]
 }
