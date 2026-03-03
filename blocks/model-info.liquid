@@ -1,0 +1,27 @@
+{% liquid
+  assign block_settings = block.settings
+  assign product = closest.product
+  assign model_info = product.metafields.models.model_info
+%}
+
+<div class="model-info">
+  <h2 class="model-info__name">{{ block_settings.model_name }}</h2>
+  <p class="model-info__description">{{ block_settings.model_description }}</p>
+  {% if model_info != blank %}
+    <p class="model-info__details">{{ model_info }}</p>
+  {% endif %}
+</div>
+
+{% schema %}
+{
+  "name": "Model Info",
+  "settings": [
+    {
+      "type": "text",
+      "id": "model_name",
+      "label": "Model Name",
+      "default": "Model Name"
+    }
+  ]
+}
+{% endschema %}
