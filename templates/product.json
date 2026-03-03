@@ -247,6 +247,12 @@
                 "padding-inline-end": 0
               },
               "blocks": {}
+            },
+            "model_info_kGHAnW": {
+              "type": "model-info",
+              "name": "Model Info",
+              "settings": {},
+              "blocks": {}
             }
           },
           "block_order": [
@@ -254,7 +260,8 @@
             "divider_VJhene",
             "variant_picker_R3rGDr",
             "buy_buttons_eYQEYi",
-            "text_aEtTtq"
+            "text_aEtTtq",
+            "model_info_kGHAnW"
           ]
         }
       },
