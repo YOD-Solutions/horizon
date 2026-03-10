@@ -255,7 +255,7 @@
                 "api_endpoint": "https://api.jsrates.com/shopify/yod-solutions-v2-shipping",
                 "shop_domain": "yod-solutions-v2.myshopify.com",
                 "api_key": "2e91575f5f1fa20661727d1a3009985a97aa5938112a12ae04af2f93fff0bde7",
-                "heading": "Check shipping rates",
+                "heading": "Check live shipping rates",
                 "label": "Postcode / ZIP",
                 "placeholder": "Enter postcode",
                 "button_label": "Get rates",
