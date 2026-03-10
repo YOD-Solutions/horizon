@@ -1,0 +1,385 @@
+{%- liquid
+  assign product_resource = closest.product
+  assign block_settings = block.settings
+  assign variant = product_resource.selected_or_first_available_variant
+-%}
+
+{% unless product_resource == blank %}
+  <div
+    class="shipping-rates spacing-style"
+    style="{% render 'spacing-style', settings: block_settings %}"
+    {{ block.shopify_attributes }}
+  >
+    {% if block_settings.heading != blank %}
+      <p class="shipping-rates__heading">{{ block_settings.heading | escape }}</p>
+    {% endif %}
+
+    <form class="shipping-rates__form" id="jsrates-form-{{ block.id }}" novalidate>
+      <div class="shipping-rates__input-row">
+        <label class="shipping-rates__label" for="jsrates-zip-{{ block.id }}">
+          {{ block_settings.label | default: 'Postcode / ZIP' | escape }}
+        </label>
+        <div class="shipping-rates__field-group">
+          <input
+            class="shipping-rates__input"
+            type="text"
+            id="jsrates-zip-{{ block.id }}"
+            name="postal_code"
+            placeholder="{{ block_settings.placeholder | default: 'Enter postcode' | escape }}"
+            autocomplete="postal-code"
+            inputmode="text"
+            maxlength="20"
+          >
+          <button class="shipping-rates__button button button--primary" type="submit">
+            {{ block_settings.button_label | default: 'Get rates' | escape }}
+          </button>
+        </div>
+        <p class="shipping-rates__error" id="jsrates-error-{{ block.id }}" role="alert" hidden></p>
+      </div>
+    </form>
+
+    <div class="shipping-rates__results" id="jsrates-results-{{ block.id }}" hidden>
+      <ul class="shipping-rates__list" id="jsrates-list-{{ block.id }}"></ul>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var blockId = {{ block.id | json }};
+      var form = document.getElementById('jsrates-form-' + blockId);
+      var input = document.getElementById('jsrates-zip-' + blockId);
+      var errorEl = document.getElementById('jsrates-error-' + blockId);
+      var resultsEl = document.getElementById('jsrates-results-' + blockId);
+      var listEl = document.getElementById('jsrates-list-' + blockId);
+
+      var rateData = {
+        "rate": {
+          "origin": {
+            "country": {{ shop.address.country.iso_code | json }},
+            "city": {{ shop.address.city | json }},
+            "postal_code": {{ shop.address.zip | json }},
+            "province": {{ shop.address.province | json }},
+            "name": {{ shop.name | json }},
+            "address1": {{ shop.address.address1 | json }},
+            "address2": {{ shop.address.address2 | json }},
+            "company_name": {{ shop.name | json }}
+          },
+          "destination": {
+            "country": {{ localization.country.iso_code | json }},
+            "city": null,
+            "postal_code": null,
+            "province": null,
+            "name": null,
+            "address1": null,
+            "address2": null
+          },
+          "items": [
+            {
+              "name": {{ product_resource.title | append: ' - ' | append: variant.title | json }},
+              "sku": {{ variant.sku | json }},
+              "grams": {{ variant.weight | default: 0 }},
+              "quantity": 1,
+              "price": {{ variant.price | default: 0 }},
+              "vendor": {{ product_resource.vendor | json }},
+              "requires_shipping": {{ variant.requires_shipping }},
+              "taxable": {{ variant.taxable }},
+              "fulfillment_service": {{ variant.fulfillment_service | json }},
+              "product_id": {{ product_resource.id }},
+              "variant_id": {{ variant.id }}
+            }
+          ],
+          "currency": {{ localization.country.currency.iso_code | json }},
+          "locale": {{ localization.language.iso_code| json }}
+        }
+      };
+
+      function formatMoney(cents) {
+        return (cents / 100).toFixed(2);
+      }
+
+      function showError(msg) {
+        errorEl.textContent = msg;
+        errorEl.hidden = false;
+        resultsEl.hidden = true;
+      }
+
+      function clearError() {
+        errorEl.hidden = true;
+        errorEl.textContent = '';
+      }
+
+      function renderRates(rates) {
+        listEl.innerHTML = '';
+        if (!rates || rates.length === 0) {
+          listEl.innerHTML = '<li class="shipping-rates__item shipping-rates__item--empty">No shipping rates available for this location.</li>';
+        } else {
+          rates.forEach(function (rate) {
+            var li = document.createElement('li');
+            li.className = 'shipping-rates__item';
+            var price = rate.total_price === 0
+              ? 'Free'
+              : {{ localization.country.currency.symbol | json }} + formatMoney(rate.total_price);
+            li.innerHTML =
+              '<span class="shipping-rates__rate-name">' + rate.service_name + '</span>' +
+              '<span class="shipping-rates__rate-price">' + price + '</span>';
+            listEl.appendChild(li);
+          });
+        }
+        resultsEl.hidden = false;
+      }
+
+      // Keep rate data in sync with selected variant
+      document.addEventListener('variant:changed', function (e) {
+        var v = e.detail && e.detail.variant;
+        if (!v) return;
+        rateData.rate.items[0].grams = v.weight || 0;
+        rateData.rate.items[0].price = v.price || 0;
+        rateData.rate.items[0].sku = v.sku || '';
+        rateData.rate.items[0].requires_shipping = v.requires_shipping;
+        rateData.rate.items[0].taxable = v.taxable;
+        rateData.rate.items[0].variant_id = v.id;
+        // Clear previous results when variant changes
+        resultsEl.hidden = true;
+        clearError();
+      });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var zip = input.value.trim();
+        if (!zip) {
+          showError('Please enter a postcode or ZIP code.');
+          return;
+        }
+        clearError();
+
+        var payload = JSON.parse(JSON.stringify(rateData));
+        payload.rate.destination.postal_code = zip;
+
+        var btn = form.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        var originalLabel = btn.textContent;
+        btn.textContent = '...';
+
+        fetch({{ block_settings.api_endpoint | json }}, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-jsrates-shop-domain': {{ block_settings.shop_domain | json }},
+            'x-jsrates-api-key': {{ block_settings.api_key | json }}
+          },
+          body: JSON.stringify(payload)
+        })
+          .then(function (res) {
+            if (!res.ok) throw new Error('Request failed (' + res.status + ')');
+            return res.json();
+          })
+          .then(function (data) {
+            renderRates(data.rates);
+          })
+          .catch(function () {
+            showError('Unable to retrieve shipping rates. Please try again.');
+          })
+          .finally(function () {
+            btn.disabled = false;
+            btn.textContent = originalLabel;
+          });
+      });
+    })();
+  </script>
+{% endunless %}
+
+{% stylesheet %}
+  .shipping-rates {
+    display: grid;
+    gap: var(--gap-sm);
+  }
+
+  .shipping-rates__heading {
+    margin: 0;
+    font-size: var(--font-paragraph-medium--size);
+    font-weight: var(--font-paragraph--weight-bold);
+    line-height: var(--font-paragraph--line-height);
+  }
+
+  .shipping-rates__label {
+    display: block;
+    font-size: var(--font-paragraph-small--size);
+    color: rgb(var(--color-foreground-rgb) / var(--opacity-subdued-text));
+    margin-bottom: var(--padding-2xs);
+  }
+
+  .shipping-rates__field-group {
+    display: flex;
+    gap: var(--gap-xs);
+  }
+
+  .shipping-rates__input {
+    flex: 1 1 0%;
+    min-width: 0;
+    height: var(--input-height);
+    padding-inline: var(--padding-sm);
+    border: 1px solid rgb(var(--color-foreground-rgb) / 0.2);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: rgb(var(--color-background-rgb));
+    color: rgb(var(--color-foreground-rgb));
+    font-size: var(--font-paragraph--size);
+    line-height: var(--font-paragraph--line-height);
+    outline-offset: 2px;
+  }
+
+  .shipping-rates__input:focus-visible {
+    outline: 2px solid rgb(var(--color-foreground-rgb));
+  }
+
+  .shipping-rates__error {
+    margin: 0;
+    font-size: var(--font-paragraph-small--size);
+    color: var(--color-error, #c0392b);
+  }
+
+  .shipping-rates__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0;
+    border: 1px solid rgb(var(--color-foreground-rgb) / 0.1);
+    border-radius: var(--style-border-radius-inputs);
+    overflow: hidden;
+  }
+
+  .shipping-rates__item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--gap-sm);
+    padding: var(--padding-xs) var(--padding-sm);
+    font-size: var(--font-paragraph--size);
+    background-color: rgb(var(--color-foreground-rgb) / 0.02);
+    border-top: 1px solid rgb(var(--color-foreground-rgb) / 0.08);
+  }
+
+  .shipping-rates__item:first-child {
+    border-top: none;
+  }
+
+  .shipping-rates__item--empty {
+    color: rgb(var(--color-foreground-rgb) / var(--opacity-subdued-text));
+    font-size: var(--font-paragraph-small--size);
+    justify-content: center;
+  }
+
+  .shipping-rates__rate-name {
+    flex: 1 1 auto;
+  }
+
+  .shipping-rates__rate-price {
+    font-weight: var(--font-weight-medium);
+    white-space: nowrap;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Shipping Rates",
+  "tag": null,
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Displays a postcode lookup widget powered by JsRates. Requires the JsRates app (full plan) to be installed. Use the direct API endpoint so JsRates can detect the visitor's location. Restrict access via domain whitelisting in JsRates Settings to protect your API key."
+    },
+    {
+      "type": "text",
+      "id": "api_endpoint",
+      "label": "JsRates API endpoint",
+      "info": "Direct endpoint URL from JsRates Settings → API. Format: https://api.jsrates.com/shopify/{store-name}-shipping"
+    },
+    {
+      "type": "text",
+      "id": "shop_domain",
+      "label": "Shop domain",
+      "info": "Your myshopify.com domain, e.g. my-store.myshopify.com"
+    },
+    {
+      "type": "text",
+      "id": "api_key",
+      "label": "JsRates API key",
+      "info": "API key from JsRates Settings → API. Enable domain whitelisting to restrict access."
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Check shipping rates"
+    },
+    {
+      "type": "text",
+      "id": "label",
+      "label": "Input label",
+      "default": "Postcode / ZIP"
+    },
+    {
+      "type": "text",
+      "id": "placeholder",
+      "label": "Input placeholder",
+      "default": "Enter postcode"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label",
+      "default": "Get rates"
+    },
+    {
+      "type": "header",
+      "content": "Padding"
+    },
+    {
+      "type": "range",
+      "id": "padding-block-start",
+      "label": "Top",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "padding-block-end",
+      "label": "Bottom",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "padding-inline-start",
+      "label": "Left",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "padding-inline-end",
+      "label": "Right",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "px",
+      "default": 0
+    }
+  ],
+  "presets": [
+    {
+      "name": "Shipping Rates",
+      "category": "Product"
+    }
+  ]
+}
+{% endschema %}
