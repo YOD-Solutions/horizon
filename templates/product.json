@@ -248,6 +248,24 @@
               },
               "blocks": {}
             },
+            "shipping_rates_txhTeD": {
+              "type": "shipping-rates",
+              "name": "Shipping Rates",
+              "settings": {
+                "api_endpoint": "",
+                "shop_domain": "",
+                "api_key": "",
+                "heading": "Check shipping rates",
+                "label": "Postcode / ZIP",
+                "placeholder": "Enter postcode",
+                "button_label": "Get rates",
+                "padding-block-start": 10,
+                "padding-block-end": 10,
+                "padding-inline-start": 10,
+                "padding-inline-end": 10
+              },
+              "blocks": {}
+            },
             "model_info_kGHAnW": {
               "type": "model-info",
               "name": "Model Info",
@@ -261,6 +279,7 @@
             "variant_picker_R3rGDr",
             "buy_buttons_eYQEYi",
             "text_aEtTtq",
+            "shipping_rates_txhTeD",
             "model_info_kGHAnW"
           ]
         }
