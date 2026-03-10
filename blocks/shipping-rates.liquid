@@ -52,6 +52,9 @@
       var resultsEl = document.getElementById('jsrates-results-' + blockId);
       var listEl = document.getElementById('jsrates-list-' + blockId);
 
+      var STORAGE_KEY = 'jsrates_destination';
+      var currencySymbol = {{ localization.country.currency.symbol | json }};
+
       var rateData = {
         "rate": {
           "origin": {
@@ -99,6 +102,15 @@
         }
       };
 
+      // --- localStorage helpers ---
+      function saveDestination(dest) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(dest)); } catch (e) {}
+      }
+      function loadDestination() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { return null; }
+      }
+
+      // --- UI helpers ---
       function formatMoney(cents) {
         return (cents / 100).toFixed(2);
       }
@@ -124,7 +136,7 @@
             li.className = 'shipping-rates__item';
             var price = rate.total_price === 0
               ? 'Free'
-              : {{ localization.country.currency.symbol | json }} + formatMoney(rate.total_price);
+              : currencySymbol + formatMoney(rate.total_price);
             li.innerHTML =
               '<span class="shipping-rates__rate-name">' + rate.service_name + '</span>' +
               '<span class="shipping-rates__rate-price">' + price + '</span>';
@@ -134,41 +146,17 @@
         resultsEl.hidden = false;
       }
 
-      // Keep rate data in sync with selected variant
-      document.addEventListener('variant:changed', function (e) {
-        var v = e.detail && e.detail.variant;
-        if (!v) return;
-        rateData.rate.items[0].grams = v.weight || 0;
-        rateData.rate.items[0].price = v.price || 0;
-        rateData.rate.items[0].sku = v.sku || '';
-        rateData.rate.items[0].requires_shipping = v.requires_shipping;
-        rateData.rate.items[0].taxable = v.taxable;
-        rateData.rate.items[0].variant_id = v.id;
-        rateData.rate.order_totals.subtotal_price = v.price || 0;
-        rateData.rate.order_totals.total_price = v.price || 0;
-        // Clear previous results when variant changes
-        resultsEl.hidden = true;
-        clearError();
-      });
-
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        var zip = input.value.trim();
-        if (!zip) {
-          showError('Please enter a postcode or ZIP code.');
-          return;
-        }
-        clearError();
-
+      // --- Core fetch ---
+      function fetchRates(zip, detectLocation) {
         var payload = JSON.parse(JSON.stringify(rateData));
-        payload.rate.destination.postal_code = zip;
+        if (zip) {
+          payload.rate.destination.postal_code = zip;
+        }
+        if (detectLocation) {
+          payload.rate._detectLocation = true;
+        }
 
-        var btn = form.querySelector('button[type="submit"]');
-        btn.disabled = true;
-        var originalLabel = btn.textContent;
-        btn.textContent = '...';
-
-        fetch({{ block_settings.api_endpoint | json }}, {
+        return fetch({{ block_settings.api_endpoint | json }}, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -182,8 +170,66 @@
             return res.json();
           })
           .then(function (data) {
+            var loc = data._detectedLocation;
+            if (loc) {
+              // Pre-populate input with detected postcode if user hasn't typed one
+              if (loc.postalCode && !input.value) {
+                input.value = loc.postalCode;
+              }
+              // Update destination in rateData for future variant-change re-fetches
+              rateData.rate.destination.postal_code = loc.postalCode || rateData.rate.destination.postal_code;
+              rateData.rate.destination.city = loc.city || null;
+              rateData.rate.destination.province = loc.regionCode || null;
+              rateData.rate.destination.country = loc.country || rateData.rate.destination.country;
+              // Persist to localStorage
+              saveDestination({
+                postalCode: loc.postalCode,
+                city: loc.city,
+                regionCode: loc.regionCode,
+                country: loc.country
+              });
+            }
             renderRates(data.rates);
-          })
+          });
+      }
+
+      // --- Variant sync ---
+      document.addEventListener('variant:changed', function (e) {
+        var v = e.detail && e.detail.variant;
+        if (!v) return;
+        rateData.rate.items[0].grams = v.weight || 0;
+        rateData.rate.items[0].price = v.price || 0;
+        rateData.rate.items[0].sku = v.sku || '';
+        rateData.rate.items[0].requires_shipping = v.requires_shipping;
+        rateData.rate.items[0].taxable = v.taxable;
+        rateData.rate.items[0].variant_id = v.id;
+        rateData.rate.order_totals.subtotal_price = v.price || 0;
+        rateData.rate.order_totals.total_price = v.price || 0;
+        resultsEl.hidden = true;
+        clearError();
+      });
+
+      // --- Manual submit ---
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var zip = input.value.trim();
+        if (!zip) {
+          showError('Please enter a postcode or ZIP code.');
+          return;
+        }
+        clearError();
+
+        // Persist manually entered zip immediately
+        var saved = loadDestination() || {};
+        saved.postalCode = zip;
+        saveDestination(saved);
+
+        var btn = form.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        var originalLabel = btn.textContent;
+        btn.textContent = '...';
+
+        fetchRates(zip, false)
           .catch(function () {
             showError('Unable to retrieve shipping rates. Please try again.');
           })
@@ -192,6 +238,21 @@
             btn.textContent = originalLabel;
           });
       });
+
+      // --- Auto-load on page load ---
+      var savedDest = loadDestination();
+      if (savedDest && savedDest.postalCode) {
+        // Restore saved destination into rateData and input
+        input.value = savedDest.postalCode;
+        rateData.rate.destination.postal_code = savedDest.postalCode;
+        rateData.rate.destination.city = savedDest.city || null;
+        rateData.rate.destination.province = savedDest.regionCode || null;
+        rateData.rate.destination.country = savedDest.country || rateData.rate.destination.country;
+        fetchRates(savedDest.postalCode, false).catch(function () {});
+      } else {
+        // No saved data — request geo-detection silently
+        fetchRates(null, true).catch(function () {});
+      }
     })();
   </script>
 {% endunless %}
