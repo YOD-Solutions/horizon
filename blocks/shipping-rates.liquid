@@ -89,7 +89,13 @@
             }
           ],
           "currency": {{ localization.country.currency.iso_code | json }},
-          "locale": {{ localization.language.iso_code| json }}
+          "locale": {{ localization.language.iso_code | json }},
+          "order_totals": {
+            "subtotal_price": {{ variant.price | default: 0 | json }},
+            "total_price": {{ variant.price | default: 0 | json }},
+            "discount_amount": "0"
+          },
+          "customer": {% if customer %}{ "id": {{ customer.id }}, "tags": {{ customer.tags | json }} }{% else %}null{% endif %}
         }
       };
 
@@ -138,6 +144,8 @@
         rateData.rate.items[0].requires_shipping = v.requires_shipping;
         rateData.rate.items[0].taxable = v.taxable;
         rateData.rate.items[0].variant_id = v.id;
+        rateData.rate.order_totals.subtotal_price = v.price || 0;
+        rateData.rate.order_totals.total_price = v.price || 0;
         // Clear previous results when variant changes
         resultsEl.hidden = true;
         clearError();
