@@ -2,6 +2,11 @@
   assign product_resource = closest.product
   assign block_settings = block.settings
   assign variant = product_resource.selected_or_first_available_variant
+  assign default_country = block_settings.default_country_code | default: localization.country.iso_code
+  assign show_address_toggle = false
+  if block_settings.show_country or block_settings.show_province or block_settings.show_city
+    assign show_address_toggle = true
+  endif
 -%}
 
 {% unless product_resource == blank %}
@@ -48,6 +53,51 @@
         </div>
         <p class="shipping-rates__error" id="jsrates-error-{{ block.id }}" role="alert" hidden></p>
       </div>
+
+      {% if show_address_toggle %}
+        <details class="shipping-rates__advanced" id="jsrates-advanced-{{ block.id }}">
+          <summary class="shipping-rates__advanced-summary">
+            {{ block_settings.address_toggle_label | default: 'Change address' | escape }}
+          </summary>
+          <div class="shipping-rates__advanced-fields">
+            {% if block_settings.show_country %}
+              <div class="shipping-rates__field">
+                <label class="shipping-rates__field-label" for="jsrates-country-{{ block.id }}">Country</label>
+                <select class="shipping-rates__select" id="jsrates-country-{{ block.id }}">
+                  {% for country in localization.available_countries %}
+                    <option
+                      value="{{ country.iso_code }}"
+                      {% if country.iso_code == default_country %}selected{% endif %}
+                    >{{ country.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            {% endif %}
+
+            {% if block_settings.show_province %}
+              <div class="shipping-rates__field" id="jsrates-province-group-{{ block.id }}" hidden>
+                <label class="shipping-rates__field-label" for="jsrates-province-{{ block.id }}">State / Province</label>
+                <select class="shipping-rates__select" id="jsrates-province-{{ block.id }}">
+                  <option value="">Select...</option>
+                </select>
+              </div>
+            {% endif %}
+
+            {% if block_settings.show_city %}
+              <div class="shipping-rates__field">
+                <label class="shipping-rates__field-label" for="jsrates-city-{{ block.id }}">City</label>
+                <input
+                  class="shipping-rates__input"
+                  type="text"
+                  id="jsrates-city-{{ block.id }}"
+                  placeholder="City"
+                  autocomplete="address-level2"
+                >
+              </div>
+            {% endif %}
+          </div>
+        </details>
+      {% endif %}
     </form>
 
     <div class="shipping-rates__results" id="jsrates-results-{{ block.id }}" hidden>
@@ -58,15 +108,35 @@
   <script>
     (function () {
       var blockId = {{ block.id | json }};
-      var form = document.getElementById('jsrates-form-' + blockId);
-      var input = document.getElementById('jsrates-zip-' + blockId);
-      var errorEl = document.getElementById('jsrates-error-' + blockId);
-      var resultsEl = document.getElementById('jsrates-results-' + blockId);
-      var listEl = document.getElementById('jsrates-list-' + blockId);
+      var form         = document.getElementById('jsrates-form-'           + blockId);
+      var input        = document.getElementById('jsrates-zip-'            + blockId);
+      var errorEl      = document.getElementById('jsrates-error-'          + blockId);
+      var resultsEl    = document.getElementById('jsrates-results-'        + blockId);
+      var listEl       = document.getElementById('jsrates-list-'           + blockId);
+      var countryEl    = document.getElementById('jsrates-country-'        + blockId);
+      var provinceGrpEl= document.getElementById('jsrates-province-group-' + blockId);
+      var provinceEl   = document.getElementById('jsrates-province-'       + blockId);
+      var cityEl       = document.getElementById('jsrates-city-'           + blockId);
 
-      var STORAGE_KEY = 'jsrates_destination';
+      var STORAGE_KEY    = 'jsrates_destination';
       var currencySymbol = {{ localization.country.currency.symbol | json }};
       var initialAvailable = {{ variant.available | json }};
+
+      // All available countries with provinces, used to populate the province dropdown
+      // and to validate detected/saved country codes.
+      var countriesData = [
+        {% for country in localization.available_countries %}
+        {
+          "iso_code": {{ country.iso_code | json }},
+          "name": {{ country.name | json }},
+          "provinces": [
+            {% for province in country.provinces %}
+            { "name": {{ province.name | json }}, "code": {{ province.code | json }} }{% unless forloop.last %},{% endunless %}
+            {% endfor %}
+          ]
+        }{% unless forloop.last %},{% endunless %}
+        {% endfor %}
+      ];
 
       var rateData = {
         "rate": {
@@ -81,10 +151,10 @@
             "company_name": {{ shop.name | json }}
           },
           "destination": {
-            "country": {{ localization.country.iso_code | json }},
-            "city": null,
-            "postal_code": null,
-            "province": null,
+            "country": {{ default_country | json }},
+            "city": {{ block_settings.default_city | default: '' | json }},
+            "postal_code": {{ block_settings.default_postal_code | default: '' | json }},
+            "province": {{ block_settings.default_province_code | default: '' | json }},
             "name": null,
             "address1": null,
             "address2": null
@@ -160,15 +230,78 @@
         resultsEl.hidden = false;
       }
 
+      // --- Province helpers ---
+      function getCountryData(isoCode) {
+        for (var i = 0; i < countriesData.length; i++) {
+          if (countriesData[i].iso_code === isoCode) return countriesData[i];
+        }
+        return null;
+      }
+
+      function populateProvinces(countryCode, selectValue) {
+        if (!provinceEl || !provinceGrpEl) return;
+        var country = getCountryData(countryCode);
+        var provinces = (country && country.provinces) ? country.provinces : [];
+
+        if (provinces.length === 0) {
+          provinceGrpEl.hidden = true;
+          rateData.rate.destination.province = null;
+          return;
+        }
+
+        provinceGrpEl.hidden = false;
+        provinceEl.innerHTML = '<option value="">Select\u2026</option>';
+        provinces.forEach(function (p) {
+          var opt = document.createElement('option');
+          opt.value = p.code;
+          opt.textContent = p.name;
+          provinceEl.appendChild(opt);
+        });
+
+        // Restore a previously selected province if still valid
+        var target = selectValue || rateData.rate.destination.province;
+        if (target && provinceEl.querySelector('option[value="' + target + '"]')) {
+          provinceEl.value = target;
+          rateData.rate.destination.province = target;
+        } else {
+          rateData.rate.destination.province = null;
+        }
+      }
+
+      // --- Set full address from a destination object ---
+      // Priority: only apply a field if it has a non-empty value.
+      // If detected country is not in available countries, keep current.
+      function setAddress(dest) {
+        // Country
+        if (dest.country) {
+          var countryInList = !!getCountryData(dest.country);
+          if (countryInList) {
+            rateData.rate.destination.country = dest.country;
+            if (countryEl) countryEl.value = dest.country;
+          }
+        }
+
+        // Province — repopulate for current country then restore value
+        populateProvinces(rateData.rate.destination.country, dest.province || null);
+
+        // City
+        if (dest.city !== undefined && dest.city !== null) {
+          rateData.rate.destination.city = dest.city;
+          if (cityEl) cityEl.value = dest.city;
+        }
+
+        // Postal code — only pre-fill input if user hasn't typed anything
+        if (dest.postalCode) {
+          rateData.rate.destination.postal_code = dest.postalCode;
+          if (!input.value) input.value = dest.postalCode;
+        }
+      }
+
       // --- Core fetch ---
       function fetchRates(zip, detectLocation) {
         var payload = JSON.parse(JSON.stringify(rateData));
-        if (zip) {
-          payload.rate.destination.postal_code = zip;
-        }
-        if (detectLocation) {
-          payload.rate._detectLocation = true;
-        }
+        if (zip) payload.rate.destination.postal_code = zip;
+        if (detectLocation) payload.rate._detectLocation = true;
 
         return fetch({{ block_settings.api_endpoint | json }}, {
           method: 'POST',
@@ -186,25 +319,53 @@
           .then(function (data) {
             var loc = data._detectedLocation;
             if (loc) {
-              // Pre-populate input with detected postcode if user hasn't typed one
-              if (loc.postalCode && !input.value) {
-                input.value = loc.postalCode;
-              }
-              // Update destination in rateData for future variant-change re-fetches
-              rateData.rate.destination.postal_code = loc.postalCode || rateData.rate.destination.postal_code;
-              rateData.rate.destination.city = loc.city || null;
-              rateData.rate.destination.province = loc.regionCode || null;
-              rateData.rate.destination.country = loc.country || rateData.rate.destination.country;
-              // Persist to localStorage
+              setAddress({
+                country:    loc.country    || null,
+                province:   loc.regionCode || null,
+                city:       loc.city       || null,
+                postalCode: loc.postalCode || null
+              });
+              // Persist the now-validated destination
               saveDestination({
-                postalCode: loc.postalCode,
-                city: loc.city,
-                regionCode: loc.regionCode,
-                country: loc.country
+                country:    rateData.rate.destination.country,
+                regionCode: rateData.rate.destination.province,
+                city:       rateData.rate.destination.city,
+                postalCode: rateData.rate.destination.postal_code
               });
             }
             renderRates(data.rates);
           });
+      }
+
+      // --- Address field event listeners ---
+      if (countryEl) {
+        countryEl.addEventListener('change', function () {
+          rateData.rate.destination.country = this.value;
+          rateData.rate.destination.province = null;
+          populateProvinces(this.value, null);
+          var saved = loadDestination() || {};
+          saved.country = this.value;
+          saved.regionCode = null;
+          saveDestination(saved);
+        });
+      }
+
+      if (provinceEl) {
+        provinceEl.addEventListener('change', function () {
+          rateData.rate.destination.province = this.value || null;
+          var saved = loadDestination() || {};
+          saved.regionCode = this.value || null;
+          saveDestination(saved);
+        });
+      }
+
+      if (cityEl) {
+        cityEl.addEventListener('change', function () {
+          rateData.rate.destination.city = this.value.trim() || null;
+          var saved = loadDestination() || {};
+          saved.city = this.value.trim() || null;
+          saveDestination(saved);
+        });
       }
 
       // --- Variant sync ---
@@ -235,7 +396,7 @@
         }
         clearError();
 
-        // Persist manually entered zip immediately
+        rateData.rate.destination.postal_code = zip;
         var saved = loadDestination() || {};
         saved.postalCode = zip;
         saveDestination(saved);
@@ -243,7 +404,7 @@
         var btn = form.querySelector('button[type="submit"]');
         btn.disabled = true;
         var originalLabel = btn.textContent;
-        btn.textContent = '...';
+        btn.textContent = '\u2026';
 
         fetchRates(zip, false)
           .catch(function () {
@@ -255,19 +416,23 @@
           });
       });
 
-      // --- Auto-load on page load ---
-      var savedDest = loadDestination();
+      // --- Initialise and auto-load ---
       if (!rateData.rate.items[0].requires_shipping || !initialAvailable) return;
+
+      var savedDest = loadDestination();
       if (savedDest && savedDest.postalCode) {
-        // Restore saved destination into rateData and input
-        input.value = savedDest.postalCode;
-        rateData.rate.destination.postal_code = savedDest.postalCode;
-        rateData.rate.destination.city = savedDest.city || null;
-        rateData.rate.destination.province = savedDest.regionCode || null;
-        rateData.rate.destination.country = savedDest.country || rateData.rate.destination.country;
+        setAddress({
+          country:    savedDest.country    || null,
+          province:   savedDest.regionCode || null,
+          city:       savedDest.city       || null,
+          postalCode: savedDest.postalCode
+        });
         fetchRates(savedDest.postalCode, false).catch(function () {});
       } else {
-        // No saved data — request geo-detection silently
+        // Apply block defaults to the DOM then geo-detect
+        populateProvinces(rateData.rate.destination.country, rateData.rate.destination.province);
+        if (cityEl && rateData.rate.destination.city) cityEl.value = rateData.rate.destination.city;
+        if (!input.value && rateData.rate.destination.postal_code) input.value = rateData.rate.destination.postal_code;
         fetchRates(null, true).catch(function () {});
       }
     })();
@@ -277,8 +442,7 @@
 {% stylesheet %}
   /*
     Local design tokens — chain to the theme's variables if they exist,
-    otherwise fall back to sensible defaults. Override these in the target
-    theme by setting the corresponding CSS custom property.
+    otherwise fall back to sensible defaults.
   */
   .shipping-rates {
     --sr-fg:            var(--color-foreground,       #1a1a1a);
@@ -376,11 +540,78 @@
   }
 
   .shipping-rates__error {
-    margin: 0;
+    margin: var(--sr-pad-2xs) 0 0;
     font-size: var(--sr-font-size-sm);
     color: var(--color-error, #c0392b);
   }
 
+  /* --- Collapsible address form --- */
+  .shipping-rates__advanced {
+    border-top: 1px solid rgb(var(--sr-fg-rgb) / 0.08);
+    padding-top: var(--sr-pad-xs);
+  }
+
+  .shipping-rates__advanced-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sr-gap-xs);
+    font-size: var(--sr-font-size-sm);
+    color: rgb(var(--sr-fg-rgb) / var(--sr-subdued));
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+
+  .shipping-rates__advanced-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .shipping-rates__advanced-summary::after {
+    content: '\25BE'; /* ▾ */
+    font-size: 0.7em;
+    transition: transform 0.15s;
+  }
+
+  .shipping-rates__advanced[open] .shipping-rates__advanced-summary::after {
+    transform: rotate(180deg);
+  }
+
+  .shipping-rates__advanced-fields {
+    display: grid;
+    gap: var(--sr-gap-sm);
+    padding-top: var(--sr-pad-sm);
+  }
+
+  .shipping-rates__field {
+    display: grid;
+    gap: var(--sr-pad-2xs);
+  }
+
+  .shipping-rates__field-label {
+    font-size: var(--sr-font-size-sm);
+    color: rgb(var(--sr-fg-rgb) / var(--sr-subdued));
+  }
+
+  .shipping-rates__select {
+    width: 100%;
+    height: var(--sr-input-height);
+    padding-inline: var(--sr-pad-sm);
+    border: 1px solid rgb(var(--sr-fg-rgb) / 0.2);
+    border-radius: var(--sr-radius);
+    background-color: rgb(var(--sr-bg-rgb));
+    color: rgb(var(--sr-fg-rgb));
+    font-size: var(--sr-font-size);
+    font-family: inherit;
+    appearance: auto;
+    outline-offset: 2px;
+    cursor: pointer;
+  }
+
+  .shipping-rates__select:focus-visible {
+    outline: 2px solid rgb(var(--sr-fg-rgb));
+  }
+
+  /* --- Rates list --- */
   .shipping-rates__list {
     list-style: none;
     margin: 0;
@@ -451,6 +682,10 @@
       "info": "API key from JsRates Settings → API. Enable domain whitelisting to restrict access."
     },
     {
+      "type": "header",
+      "content": "Labels"
+    },
+    {
       "type": "text",
       "id": "heading",
       "label": "Heading",
@@ -459,13 +694,13 @@
     {
       "type": "text",
       "id": "label",
-      "label": "Input label",
+      "label": "Postcode input label",
       "default": "Postcode / ZIP"
     },
     {
       "type": "text",
       "id": "placeholder",
-      "label": "Input placeholder",
+      "label": "Postcode input placeholder",
       "default": "Enter postcode"
     },
     {
@@ -473,6 +708,68 @@
       "id": "button_label",
       "label": "Button label",
       "default": "Get rates"
+    },
+    {
+      "type": "text",
+      "id": "address_toggle_label",
+      "label": "Address toggle label",
+      "default": "Change address"
+    },
+    {
+      "type": "header",
+      "content": "Address fields"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_country",
+      "label": "Show country",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_province",
+      "label": "Show state / province",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_city",
+      "label": "Show city",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "Default address"
+    },
+    {
+      "type": "paragraph",
+      "content": "Used when the visitor's location cannot be detected and no address is saved. Country must be available in your store markets."
+    },
+    {
+      "type": "text",
+      "id": "default_country_code",
+      "label": "Country code",
+      "info": "2-letter ISO code, e.g. AU. Leave blank to use the store's current locale.",
+      "default": ""
+    },
+    {
+      "type": "text",
+      "id": "default_province_code",
+      "label": "State / province code",
+      "info": "e.g. VIC, NSW, CA. Leave blank if not applicable.",
+      "default": ""
+    },
+    {
+      "type": "text",
+      "id": "default_city",
+      "label": "City",
+      "default": ""
+    },
+    {
+      "type": "text",
+      "id": "default_postal_code",
+      "label": "Postcode / ZIP",
+      "default": ""
     },
     {
       "type": "header",
