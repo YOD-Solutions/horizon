@@ -407,6 +407,7 @@
         var v = e.detail && e.detail.variant;
         if (!v) return;
         container.hidden = !v.requires_shipping || !v.available;
+        rateData.rate.items[0].name = (e.detail.productTitle || '') + (v.title && v.title !== 'Default Title' ? ' - ' + v.title : '');
         rateData.rate.items[0].grams = v.weight || 0;
         rateData.rate.items[0].price = v.price || 0;
         rateData.rate.items[0].sku = v.sku || '';
@@ -415,8 +416,13 @@
         rateData.rate.items[0].variant_id = v.id;
         rateData.rate.order_totals.subtotal_price = v.price || 0;
         rateData.rate.order_totals.total_price = v.price || 0;
-        resultsEl.hidden = true;
         clearError();
+        // Re-fetch rates for the new variant if we already have a destination
+        if (v.requires_shipping && v.available && rateData.rate.destination.postal_code) {
+          fetchRates(rateData.rate.destination.postal_code, false).catch(function () {});
+        } else {
+          resultsEl.hidden = true;
+        }
       });
 
       // --- Manual submit ---
