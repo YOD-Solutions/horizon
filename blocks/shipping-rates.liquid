@@ -417,6 +417,11 @@
       });
 
       // --- Initialise and auto-load ---
+      // Always populate provinces for the current default country on page load
+      populateProvinces(rateData.rate.destination.country, rateData.rate.destination.province);
+      if (cityEl && rateData.rate.destination.city) cityEl.value = rateData.rate.destination.city;
+      if (!input.value && rateData.rate.destination.postal_code) input.value = rateData.rate.destination.postal_code;
+
       if (!rateData.rate.items[0].requires_shipping || !initialAvailable) return;
 
       var savedDest = loadDestination();
@@ -429,10 +434,6 @@
         });
         fetchRates(savedDest.postalCode, false).catch(function () {});
       } else {
-        // Apply block defaults to the DOM then geo-detect
-        populateProvinces(rateData.rate.destination.country, rateData.rate.destination.province);
-        if (cityEl && rateData.rate.destination.city) cityEl.value = rateData.rate.destination.city;
-        if (!input.value && rateData.rate.destination.postal_code) input.value = rateData.rate.destination.postal_code;
         fetchRates(null, true).catch(function () {});
       }
     })();
