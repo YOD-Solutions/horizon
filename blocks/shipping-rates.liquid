@@ -402,6 +402,7 @@
         clearError();
 
         rateData.rate.destination.postal_code = zip;
+        updateAddressSummary();
         saveDestination({
           country:    rateData.rate.destination.country,
           regionCode: rateData.rate.destination.province,
