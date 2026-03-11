@@ -516,16 +516,16 @@
     --sr-pad-2xs:      4px;
     --sr-pad-xs:       8px;
     --sr-pad-sm:       12px;
-    --sr-input-height: 44px;
-    /* typography — relative to theme section font size */
-    --sr-font-size:    1em;
-    --sr-font-size-sm: 0.875em;
-    --sr-font-size-md: 1em;
+    --sr-input-height: 40px;
+    /* type scale — all em values are relative to the 0.9375em container base */
+    --sr-font-size:    1em;       /* ~15px: inputs, selects, rate rows  */
+    --sr-font-size-sm: 0.8em;     /* ~12px: labels, address, error      */
+    --sr-font-size-md: 1.133em;   /* ~17px: heading                     */
     --sr-line-height:  1.5;
     --sr-bold:         700;
     --sr-medium:       500;
 
-    font-size: inherit;
+    font-size: 0.9375em;  /* compact base — slightly below theme body size */
     font-family: inherit;
     display: grid;
     gap: var(--sr-gap-sm);
@@ -540,7 +540,7 @@
 
   .shipping-rates__heading {
     margin: 0;
-    font-size: 1.0625em;
+    font-size: var(--sr-font-size-md);
     font-weight: var(--sr-medium);
     line-height: var(--sr-line-height);
   }
