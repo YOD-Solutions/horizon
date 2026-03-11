@@ -248,12 +248,12 @@
           rates.forEach(function (rate) {
             var li = document.createElement('li');
             li.className = 'shipping-rates__item';
-            var price = rate.total_price === 0
-              ? 'Free'
-              : currencySymbol + formatMoney(rate.total_price);
+            var isFree = rate.total_price === 0;
+            var price = isFree ? 'Free' : currencySymbol + formatMoney(rate.total_price);
+            var priceClass = 'shipping-rates__rate-price' + (isFree ? ' shipping-rates__rate-price--free' : '');
             li.innerHTML =
               '<span class="shipping-rates__rate-name">' + rate.service_name + '</span>' +
-              '<span class="shipping-rates__rate-price">' + price + '</span>';
+              '<span class="' + priceClass + '">' + price + '</span>';
             listEl.appendChild(li);
           });
         }
@@ -540,7 +540,7 @@
 
   .shipping-rates__heading {
     margin: 0;
-    font-size: var(--sr-font-size-md);
+    font-size: 1.0625em;
     font-weight: var(--sr-medium);
     line-height: var(--sr-line-height);
   }
@@ -695,7 +695,7 @@
     padding: 0;
     display: grid;
     gap: 0;
-    border: 1px solid var(--sr-fg-faint);
+    border: 1px solid var(--sr-fg-muted);
     border-radius: var(--sr-radius);
     overflow: hidden;
   }
@@ -726,8 +726,12 @@
   }
 
   .shipping-rates__rate-price {
-    font-weight: var(--sr-medium);
+    font-weight: var(--sr-bold);
     white-space: nowrap;
+  }
+
+  .shipping-rates__rate-price--free {
+    color: var(--sr-accent);
   }
 {% endstylesheet %}
 
