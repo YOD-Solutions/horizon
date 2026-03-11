@@ -14,6 +14,7 @@
     assign default_country = localization.country.iso_code
   endif
 
+  assign sr_fg = block_settings.text_color | default: '#1a1a1a'
 -%}
 
 {% unless product_resource == blank %}
@@ -24,12 +25,20 @@
       padding-block-end: {{ block_settings['padding-block-end'] }}px;
       padding-inline-start: {{ block_settings['padding-inline-start'] }}px;
       padding-inline-end: {{ block_settings['padding-inline-end'] }}px;
-      --sr-bg: {{ block_settings.background_color | default: 'transparent' }};
-      --sr-radius: {{ block_settings.border_radius }}px;
-      --sr-border-width: {{ block_settings.border_width }}px;
-      --sr-border-color: {{ block_settings.border_color }};
-      --sr-accent: {{ block_settings.button_background }};
-      --sr-accent-fg: {{ block_settings.button_text_color }};
+      --sr-fg:            {{ sr_fg }};
+      --sr-fg-subdued:    {{ sr_fg | color_modify: 'alpha', 0.55 }};
+      --sr-fg-muted:      {{ sr_fg | color_modify: 'alpha', 0.20 }};
+      --sr-fg-faint:      {{ sr_fg | color_modify: 'alpha', 0.08 }};
+      --sr-fg-xfaint:     {{ sr_fg | color_modify: 'alpha', 0.02 }};
+      --sr-fg-icon:       {{ sr_fg | color_modify: 'alpha', 0.40 }};
+      --sr-fg-icon-dim:   {{ sr_fg | color_modify: 'alpha', 0.25 }};
+      --sr-fg-icon-hover: {{ sr_fg | color_modify: 'alpha', 0.60 }};
+      --sr-bg:            {{ block_settings.background_color | default: '#ffffff' }};
+      --sr-radius:        {{ block_settings.border_radius }}px;
+      --sr-border-width:  {{ block_settings.border_width }}px;
+      --sr-border-color:  {{ block_settings.border_color }};
+      --sr-accent:        {{ block_settings.button_background }};
+      --sr-accent-fg:     {{ block_settings.button_text_color }};
     "
     {{ block.shopify_attributes }}
     {% unless variant.requires_shipping and variant.available %}hidden{% endunless %}
@@ -495,33 +504,29 @@
 
 {% stylesheet %}
   /*
-    Local design tokens — chain to the theme's variables if they exist,
-    otherwise fall back to sensible defaults.
+    All color tokens are computed from block settings and injected via
+    inline style — no theme CSS variable dependencies.
+    Typography uses em/inherit so it scales with whatever theme section
+    the block is placed in.
   */
   .shipping-rates {
-    --sr-fg:            var(--color-foreground,       #1a1a1a);
-    --sr-fg-rgb:        var(--color-foreground-rgb,   26 26 26);
-    --sr-bg:            var(--color-background,       #ffffff);
-    --sr-bg-rgb:        var(--color-background-rgb,   255 255 255);
-    --sr-accent:        var(--color-button,           #1a1a1a);
-    --sr-accent-fg:     var(--color-button-text,      #ffffff);
-    --sr-radius:        var(--style-border-radius-inputs, 4px);
-    --sr-border-width:  0px;
-    --sr-border-color:  transparent;
-    --sr-input-height:  var(--input-height,           44px);
-    --sr-gap-xs:        var(--gap-xs,                 4px);
-    --sr-gap-sm:        var(--gap-sm,                 8px);
-    --sr-pad-2xs:       var(--padding-2xs,            4px);
-    --sr-pad-xs:        var(--padding-xs,             8px);
-    --sr-pad-sm:        var(--padding-sm,             12px);
-    --sr-font-size:     var(--font-paragraph--size,         1rem);
-    --sr-font-size-sm:  var(--font-paragraph-small--size,   0.875rem);
-    --sr-font-size-md:  var(--font-paragraph-medium--size,  1rem);
-    --sr-line-height:   var(--font-paragraph--line-height,  1.5);
-    --sr-bold:          var(--font-paragraph--weight-bold,  700);
-    --sr-medium:        var(--font-weight-medium,           500);
-    --sr-subdued:       var(--opacity-subdued-text,         0.55);
+    /* spacing */
+    --sr-gap-xs:       4px;
+    --sr-gap-sm:       8px;
+    --sr-pad-2xs:      4px;
+    --sr-pad-xs:       8px;
+    --sr-pad-sm:       12px;
+    --sr-input-height: 44px;
+    /* typography — relative to theme section font size */
+    --sr-font-size:    1em;
+    --sr-font-size-sm: 0.875em;
+    --sr-font-size-md: 1em;
+    --sr-line-height:  1.5;
+    --sr-bold:         700;
+    --sr-medium:       500;
 
+    font-size: inherit;
+    font-family: inherit;
     display: grid;
     gap: var(--sr-gap-sm);
     background-color: var(--sr-bg, transparent);
@@ -546,7 +551,7 @@
 
   .shipping-rates__address-summary {
     font-size: var(--sr-font-size-sm);
-    color: rgb(var(--sr-fg-rgb) / var(--sr-subdued));
+    color: var(--sr-fg-subdued);
   }
 
   .shipping-rates__input {
@@ -554,10 +559,10 @@
     box-sizing: border-box;
     height: var(--sr-input-height);
     padding-inline: var(--sr-pad-sm);
-    border: 1px solid rgb(var(--sr-fg-rgb) / 0.2);
+    border: 1px solid var(--sr-fg-muted);
     border-radius: var(--sr-radius);
-    background-color: rgb(var(--sr-bg-rgb));
-    color: rgb(var(--sr-fg-rgb));
+    background-color: var(--sr-bg);
+    color: var(--sr-fg);
     font-size: var(--sr-font-size);
     line-height: var(--sr-line-height);
     font-family: inherit;
@@ -565,7 +570,7 @@
   }
 
   .shipping-rates__input:focus-visible {
-    outline: 2px solid rgb(var(--sr-fg-rgb));
+    outline: 2px solid var(--sr-fg);
   }
 
   .shipping-rates__button {
@@ -597,12 +602,12 @@
   .shipping-rates__error {
     margin: var(--sr-pad-2xs) 0 0;
     font-size: var(--sr-font-size-sm);
-    color: var(--color-error, #c0392b);
+    color: #c0392b;
   }
 
   /* --- Collapsible address form --- */
   .shipping-rates__advanced {
-    border-top: 1px solid rgb(var(--sr-fg-rgb) / 0.08);
+    border-top: 1px solid var(--sr-fg-faint);
     padding-top: var(--sr-pad-xs);
   }
 
@@ -621,7 +626,7 @@
 
   .shipping-rates__address-text {
     font-size: var(--sr-font-size-sm);
-    color: rgb(var(--sr-fg-rgb) / var(--sr-subdued));
+    color: var(--sr-fg-subdued);
   }
 
   .shipping-rates__advanced-summary:hover .shipping-rates__address-text {
@@ -631,17 +636,17 @@
 
   .shipping-rates__map-icon {
     flex-shrink: 0;
-    color: rgb(var(--sr-fg-rgb) / 0.4);
+    color: var(--sr-fg-icon);
   }
 
   .shipping-rates__edit-icon {
     flex-shrink: 0;
-    color: rgb(var(--sr-fg-rgb) / 0.25);
+    color: var(--sr-fg-icon-dim);
     transition: color 0.15s;
   }
 
   .shipping-rates__advanced-summary:hover .shipping-rates__edit-icon {
-    color: rgb(var(--sr-fg-rgb) / 0.6);
+    color: var(--sr-fg-icon-hover);
   }
 
   .shipping-rates__advanced-fields {
@@ -661,17 +666,17 @@
 
   .shipping-rates__field-label {
     font-size: var(--sr-font-size-sm);
-    color: rgb(var(--sr-fg-rgb) / var(--sr-subdued));
+    color: var(--sr-fg-subdued);
   }
 
   .shipping-rates__select {
     width: 100%;
     height: var(--sr-input-height);
     padding-inline: var(--sr-pad-sm);
-    border: 1px solid rgb(var(--sr-fg-rgb) / 0.2);
+    border: 1px solid var(--sr-fg-muted);
     border-radius: var(--sr-radius);
-    background-color: rgb(var(--sr-bg-rgb));
-    color: rgb(var(--sr-fg-rgb));
+    background-color: var(--sr-bg);
+    color: var(--sr-fg);
     font-size: var(--sr-font-size);
     font-family: inherit;
     appearance: auto;
@@ -680,7 +685,7 @@
   }
 
   .shipping-rates__select:focus-visible {
-    outline: 2px solid rgb(var(--sr-fg-rgb));
+    outline: 2px solid var(--sr-fg);
   }
 
   /* --- Rates list --- */
@@ -690,7 +695,7 @@
     padding: 0;
     display: grid;
     gap: 0;
-    border: 1px solid rgb(var(--sr-fg-rgb) / 0.1);
+    border: 1px solid var(--sr-fg-faint);
     border-radius: var(--sr-radius);
     overflow: hidden;
   }
@@ -702,8 +707,8 @@
     gap: var(--sr-gap-sm);
     padding: var(--sr-pad-xs) var(--sr-pad-sm);
     font-size: var(--sr-font-size);
-    background-color: rgb(var(--sr-fg-rgb) / 0.02);
-    border-top: 1px solid rgb(var(--sr-fg-rgb) / 0.08);
+    background-color: var(--sr-fg-xfaint);
+    border-top: 1px solid var(--sr-fg-faint);
   }
 
   .shipping-rates__item:first-child {
@@ -711,7 +716,7 @@
   }
 
   .shipping-rates__item--empty {
-    color: rgb(var(--sr-fg-rgb) / var(--sr-subdued));
+    color: var(--sr-fg-subdued);
     font-size: var(--sr-font-size-sm);
     justify-content: center;
   }
@@ -854,6 +859,12 @@
     {
       "type": "header",
       "content": "Container"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#1a1a1a"
     },
     {
       "type": "color",
