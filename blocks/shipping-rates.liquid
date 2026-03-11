@@ -157,6 +157,16 @@
       // Built from /services/countries.js after page load.
       var countriesData = {};
 
+      // Customer's Shopify default address (null when logged out or no address saved).
+      var customerAddress = {% if customer and customer.default_address and customer.default_address.zip != blank %}
+        {
+          country:    {{ customer.default_address.country_code | json }},
+          province:   {{ customer.default_address.province_code | json }},
+          city:       {{ customer.default_address.city | json }},
+          postalCode: {{ customer.default_address.zip | json }}
+        }
+      {% else %}null{% endif %};
+
       var rateData = {
         "rate": {
           "origin": {
@@ -457,6 +467,7 @@
 
         var savedDest = loadDestination();
         if (savedDest && savedDest.postalCode) {
+          // 1. User's previously saved address wins
           setAddress({
             country:    savedDest.country    || null,
             province:   savedDest.regionCode || null,
@@ -464,7 +475,12 @@
             postalCode: savedDest.postalCode
           });
           fetchRates(savedDest.postalCode, false).catch(function () {});
+        } else if (customerAddress && customerAddress.postalCode) {
+          // 2. Logged-in customer's default Shopify address
+          setAddress(customerAddress);
+          fetchRates(customerAddress.postalCode, false).catch(function () {});
         } else {
+          // 3. Geo-detect location via JsRates
           fetchRates(null, true).catch(function () {});
         }
       }
@@ -477,6 +493,11 @@
         if (_earlyDest.regionCode) rateData.rate.destination.province     = _earlyDest.regionCode;
         if (_earlyDest.city)       rateData.rate.destination.city         = _earlyDest.city;
         if (_earlyDest.postalCode) rateData.rate.destination.postal_code  = _earlyDest.postalCode;
+      } else if (customerAddress) {
+        if (customerAddress.country)    rateData.rate.destination.country     = customerAddress.country;
+        if (customerAddress.province)   rateData.rate.destination.province    = customerAddress.province;
+        if (customerAddress.city)       rateData.rate.destination.city        = customerAddress.city;
+        if (customerAddress.postalCode) rateData.rate.destination.postal_code = customerAddress.postalCode;
       }
       updateAddressSummary();
 
