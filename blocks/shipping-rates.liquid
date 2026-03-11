@@ -347,28 +347,18 @@
           rateData.rate.destination.country = this.value;
           rateData.rate.destination.province = null;
           populateProvinces(this.value, null);
-          var saved = loadDestination() || {};
-          saved.country = this.value;
-          saved.regionCode = null;
-          saveDestination(saved);
         });
       }
 
       if (provinceEl) {
         provinceEl.addEventListener('change', function () {
           rateData.rate.destination.province = this.value || null;
-          var saved = loadDestination() || {};
-          saved.regionCode = this.value || null;
-          saveDestination(saved);
         });
       }
 
       if (cityEl) {
         cityEl.addEventListener('change', function () {
           rateData.rate.destination.city = this.value.trim() || null;
-          var saved = loadDestination() || {};
-          saved.city = this.value.trim() || null;
-          saveDestination(saved);
         });
       }
 
@@ -401,9 +391,12 @@
         clearError();
 
         rateData.rate.destination.postal_code = zip;
-        var saved = loadDestination() || {};
-        saved.postalCode = zip;
-        saveDestination(saved);
+        saveDestination({
+          country:    rateData.rate.destination.country,
+          regionCode: rateData.rate.destination.province,
+          city:       rateData.rate.destination.city,
+          postalCode: zip
+        });
 
         var btn = form.querySelector('button[type="submit"]');
         btn.disabled = true;
