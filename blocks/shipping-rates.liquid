@@ -35,7 +35,7 @@
     {% unless variant.requires_shipping and variant.available %}hidden{% endunless %}
   >
     {% if block_settings.heading != blank %}
-      <p class="shipping-rates__heading">{{ block_settings.heading | escape }}</p>
+      <p class="shipping-rates__heading{% if block_settings.heading_bold %} shipping-rates__heading--bold{% endif %}">{{ block_settings.heading | escape }}</p>
     {% endif %}
 
     <form class="shipping-rates__form" id="jsrates-form-{{ block.id }}" novalidate>
@@ -536,8 +536,12 @@
   .shipping-rates__heading {
     margin: 0;
     font-size: var(--sr-font-size-md);
-    font-weight: var(--sr-bold);
+    font-weight: var(--sr-medium);
     line-height: var(--sr-line-height);
+  }
+
+  .shipping-rates__heading--bold {
+    font-weight: var(--sr-bold);
   }
 
   .shipping-rates__address-summary {
@@ -752,6 +756,12 @@
     {
       "type": "header",
       "content": "Labels"
+    },
+    {
+      "type": "checkbox",
+      "id": "heading_bold",
+      "label": "Bold heading",
+      "default": false
     },
     {
       "type": "text",
