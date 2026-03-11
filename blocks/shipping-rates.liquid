@@ -290,10 +290,10 @@
           if (cityEl) cityEl.value = dest.city;
         }
 
-        // Postal code — only pre-fill input if user hasn't typed anything
+        // Postal code — always update to reflect the resolved address
         if (dest.postalCode) {
           rateData.rate.destination.postal_code = dest.postalCode;
-          if (!input.value) input.value = dest.postalCode;
+          input.value = dest.postalCode;
         }
       }
 
