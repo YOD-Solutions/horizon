@@ -454,6 +454,8 @@
         }
       }
 
+      updateAddressSummary();
+
       fetch('/services/countries.js')
         .then(function(r) { return r.text(); })
         .then(function(text) {
