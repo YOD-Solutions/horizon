@@ -7,7 +7,18 @@
 {% unless product_resource == blank %}
   <div
     class="shipping-rates"
-    style="padding-block-start: {{ block_settings['padding-block-start'] }}px; padding-block-end: {{ block_settings['padding-block-end'] }}px; padding-inline-start: {{ block_settings['padding-inline-start'] }}px; padding-inline-end: {{ block_settings['padding-inline-end'] }}px;"
+    style="
+      padding-block-start: {{ block_settings['padding-block-start'] }}px;
+      padding-block-end: {{ block_settings['padding-block-end'] }}px;
+      padding-inline-start: {{ block_settings['padding-inline-start'] }}px;
+      padding-inline-end: {{ block_settings['padding-inline-end'] }}px;
+      --sr-bg: {{ block_settings.background_color | default: 'transparent' }};
+      --sr-radius: {{ block_settings.border_radius }}px;
+      --sr-border-width: {{ block_settings.border_width }}px;
+      --sr-border-color: {{ block_settings.border_color }};
+      --sr-accent: {{ block_settings.button_background }};
+      --sr-accent-fg: {{ block_settings.button_text_color }};
+    "
     {{ block.shopify_attributes }}
     {% unless variant.requires_shipping and variant.available %}hidden{% endunless %}
   >
@@ -277,6 +288,8 @@
     --sr-accent:        var(--color-button,           #1a1a1a);
     --sr-accent-fg:     var(--color-button-text,      #ffffff);
     --sr-radius:        var(--style-border-radius-inputs, 4px);
+    --sr-border-width:  0px;
+    --sr-border-color:  transparent;
     --sr-input-height:  var(--input-height,           44px);
     --sr-gap-xs:        var(--gap-xs,                 4px);
     --sr-gap-sm:        var(--gap-sm,                 8px);
@@ -293,6 +306,9 @@
 
     display: grid;
     gap: var(--sr-gap-sm);
+    background-color: var(--sr-bg, transparent);
+    border: var(--sr-border-width, 0px) solid var(--sr-border-color, transparent);
+    border-radius: var(--sr-radius, 4px);
   }
 
   .shipping-rates[hidden] {
@@ -457,6 +473,58 @@
       "id": "button_label",
       "label": "Button label",
       "default": "Get rates"
+    },
+    {
+      "type": "header",
+      "content": "Container"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#f9f9f9"
+    },
+    {
+      "type": "range",
+      "id": "border_width",
+      "label": "Border width",
+      "min": 0,
+      "max": 4,
+      "step": 1,
+      "unit": "px",
+      "default": 1
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border color",
+      "default": "#e0e0e0"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "label": "Corner radius",
+      "min": 0,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 4
+    },
+    {
+      "type": "header",
+      "content": "Button"
+    },
+    {
+      "type": "color",
+      "id": "button_background",
+      "label": "Background",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Text color",
+      "default": "#ffffff"
     },
     {
       "type": "header",
