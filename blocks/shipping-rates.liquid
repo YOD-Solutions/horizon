@@ -104,13 +104,6 @@
       <ul class="shipping-rates__list" id="jsrates-list-{{ block.id }}"></ul>
     </div>
 
-    {%- comment -%}
-      Hidden select used only to extract province data from Shopify's
-      all_country_option_tags (each <option> carries data-provinces JSON).
-    {%- endcomment -%}
-    <select id="jsrates-all-countries-{{ block.id }}" aria-hidden="true" hidden tabindex="-1">
-      {{ all_country_option_tags }}
-    </select>
   </div>
 
   <script>
@@ -130,27 +123,15 @@
       var currencySymbol = {{ localization.country.currency.symbol | json }};
       var initialAvailable = {{ variant.available | json }};
 
-      // Build province lookup from the hidden all_country_option_tags select.
-      // Each <option> carries a data-provinces attribute with JSON: [["code","name"], ...]
-      // This works for all world countries, independent of Markets or login state.
-      var allCountriesEl = document.getElementById('jsrates-all-countries-' + blockId);
-      var countriesData = [];
-      if (allCountriesEl) {
-        Array.prototype.forEach.call(allCountriesEl.options, function(opt) {
-          var raw = opt.getAttribute('data-provinces');
-          var provinces = [];
-          try {
-            var parsed = JSON.parse(raw);
-            provinces = parsed.map(function(p) { return { code: p[0], name: p[1] }; });
-          } catch (e) {}
-          countriesData.push({ iso_code: opt.value, name: opt.textContent.trim(), provinces: provinces });
-        });
-      }
-
       // Country codes available in Shopify Markets (for validating detected/saved country).
       var availableCountryCodes = [
         {% for country in localization.available_countries %}"{{ country.iso_code }}"{% unless forloop.last %},{% endunless %}{% endfor %}
       ];
+
+      // Province lookup built from /services/countries.js.
+      // Format: { "AU": [["Australian Capital Territory","ACT"], ...], ... }
+      // Provinces are [name, code] pairs.
+      var countriesData = {};
 
       var rateData = {
         "rate": {
@@ -245,21 +226,15 @@
       }
 
       // --- Country / Province helpers ---
-      function getCountryData(isoCode) {
-        for (var i = 0; i < countriesData.length; i++) {
-          if (countriesData[i].iso_code === isoCode) return countriesData[i];
-        }
-        return null;
-      }
-
       function isCountryAvailable(isoCode) {
         return availableCountryCodes.indexOf(isoCode) !== -1;
       }
 
       function populateProvinces(countryCode, selectValue) {
         if (!provinceEl || !provinceGrpEl) return;
-        var country = getCountryData(countryCode);
-        var provinces = (country && country.provinces) ? country.provinces : [];
+        var raw = countriesData[countryCode] || [];
+        // /services/countries.js format: [["Province Name", "CODE"], ...]
+        var provinces = raw.map(function(p) { return { name: p[0], code: p[1] }; });
 
         if (provinces.length === 0) {
           provinceGrpEl.hidden = true;
@@ -433,26 +408,39 @@
           });
       });
 
-      // --- Initialise and auto-load ---
-      // Always populate provinces for the current default country on page load
-      populateProvinces(rateData.rate.destination.country, rateData.rate.destination.province);
-      if (cityEl && rateData.rate.destination.city) cityEl.value = rateData.rate.destination.city;
-      if (!input.value && rateData.rate.destination.postal_code) input.value = rateData.rate.destination.postal_code;
+      // --- Initialise and auto-load (after province data is ready) ---
+      function init() {
+        populateProvinces(rateData.rate.destination.country, rateData.rate.destination.province);
+        if (cityEl && rateData.rate.destination.city) cityEl.value = rateData.rate.destination.city;
+        if (!input.value && rateData.rate.destination.postal_code) input.value = rateData.rate.destination.postal_code;
 
-      if (!rateData.rate.items[0].requires_shipping || !initialAvailable) return;
+        if (!rateData.rate.items[0].requires_shipping || !initialAvailable) return;
 
-      var savedDest = loadDestination();
-      if (savedDest && savedDest.postalCode) {
-        setAddress({
-          country:    savedDest.country    || null,
-          province:   savedDest.regionCode || null,
-          city:       savedDest.city       || null,
-          postalCode: savedDest.postalCode
-        });
-        fetchRates(savedDest.postalCode, false).catch(function () {});
-      } else {
-        fetchRates(null, true).catch(function () {});
+        var savedDest = loadDestination();
+        if (savedDest && savedDest.postalCode) {
+          setAddress({
+            country:    savedDest.country    || null,
+            province:   savedDest.regionCode || null,
+            city:       savedDest.city       || null,
+            postalCode: savedDest.postalCode
+          });
+          fetchRates(savedDest.postalCode, false).catch(function () {});
+        } else {
+          fetchRates(null, true).catch(function () {});
+        }
       }
+
+      fetch('/services/countries.js')
+        .then(function(r) { return r.text(); })
+        .then(function(text) {
+          // Response is: var Countries = {"AU":[["New South Wales","NSW"],...], ...};
+          // Extract the JSON object between the first { and last }
+          var start = text.indexOf('{');
+          var end   = text.lastIndexOf('}') + 1;
+          countriesData = JSON.parse(text.substring(start, end));
+        })
+        .catch(function() { /* province data unavailable; widget still functional */ })
+        .then(function() { init(); });
     })();
   </script>
 {% endunless %}
