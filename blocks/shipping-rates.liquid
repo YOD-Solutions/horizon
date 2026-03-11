@@ -454,6 +454,15 @@
         }
       }
 
+      // Apply saved address to rateData synchronously so the summary
+      // renders once with the correct address, before any network requests.
+      var _earlyDest = loadDestination();
+      if (_earlyDest) {
+        if (_earlyDest.country)    rateData.rate.destination.country      = _earlyDest.country;
+        if (_earlyDest.regionCode) rateData.rate.destination.province     = _earlyDest.regionCode;
+        if (_earlyDest.city)       rateData.rate.destination.city         = _earlyDest.city;
+        if (_earlyDest.postalCode) rateData.rate.destination.postal_code  = _earlyDest.postalCode;
+      }
       updateAddressSummary();
 
       fetch('/services/countries.js')
