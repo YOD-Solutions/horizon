@@ -6,8 +6,8 @@
 
 {% unless product_resource == blank %}
   <div
-    class="shipping-rates spacing-style"
-    style="{% render 'spacing-style', settings: block_settings %}"
+    class="shipping-rates"
+    style="padding-block-start: {{ block_settings['padding-block-start'] }}px; padding-block-end: {{ block_settings['padding-block-end'] }}px; padding-inline-start: {{ block_settings['padding-inline-start'] }}px; padding-inline-end: {{ block_settings['padding-inline-end'] }}px;"
     {{ block.shopify_attributes }}
     {% unless variant.requires_shipping and variant.available %}hidden{% endunless %}
   >
@@ -31,7 +31,7 @@
             inputmode="text"
             maxlength="20"
           >
-          <button class="shipping-rates__button button button--primary" type="submit">
+          <button class="shipping-rates__button" type="submit">
             {{ block_settings.button_label | default: 'Get rates' | escape }}
           </button>
         </div>
@@ -264,9 +264,35 @@
 {% endunless %}
 
 {% stylesheet %}
+  /*
+    Local design tokens — chain to the theme's variables if they exist,
+    otherwise fall back to sensible defaults. Override these in the target
+    theme by setting the corresponding CSS custom property.
+  */
   .shipping-rates {
+    --sr-fg:            var(--color-foreground,       #1a1a1a);
+    --sr-fg-rgb:        var(--color-foreground-rgb,   26 26 26);
+    --sr-bg:            var(--color-background,       #ffffff);
+    --sr-bg-rgb:        var(--color-background-rgb,   255 255 255);
+    --sr-accent:        var(--color-button,           #1a1a1a);
+    --sr-accent-fg:     var(--color-button-text,      #ffffff);
+    --sr-radius:        var(--style-border-radius-inputs, 4px);
+    --sr-input-height:  var(--input-height,           44px);
+    --sr-gap-xs:        var(--gap-xs,                 4px);
+    --sr-gap-sm:        var(--gap-sm,                 8px);
+    --sr-pad-2xs:       var(--padding-2xs,            4px);
+    --sr-pad-xs:        var(--padding-xs,             8px);
+    --sr-pad-sm:        var(--padding-sm,             12px);
+    --sr-font-size:     var(--font-paragraph--size,         1rem);
+    --sr-font-size-sm:  var(--font-paragraph-small--size,   0.875rem);
+    --sr-font-size-md:  var(--font-paragraph-medium--size,  1rem);
+    --sr-line-height:   var(--font-paragraph--line-height,  1.5);
+    --sr-bold:          var(--font-paragraph--weight-bold,  700);
+    --sr-medium:        var(--font-weight-medium,           500);
+    --sr-subdued:       var(--opacity-subdued-text,         0.55);
+
     display: grid;
-    gap: var(--gap-sm);
+    gap: var(--sr-gap-sm);
   }
 
   .shipping-rates[hidden] {
@@ -275,44 +301,67 @@
 
   .shipping-rates__heading {
     margin: 0;
-    font-size: var(--font-paragraph-medium--size);
-    font-weight: var(--font-paragraph--weight-bold);
-    line-height: var(--font-paragraph--line-height);
+    font-size: var(--sr-font-size-md);
+    font-weight: var(--sr-bold);
+    line-height: var(--sr-line-height);
   }
 
   .shipping-rates__label {
     display: block;
-    font-size: var(--font-paragraph-small--size);
-    color: rgb(var(--color-foreground-rgb) / var(--opacity-subdued-text));
-    margin-bottom: var(--padding-2xs);
+    font-size: var(--sr-font-size-sm);
+    color: rgb(var(--sr-fg-rgb) / var(--sr-subdued));
+    margin-bottom: var(--sr-pad-2xs);
   }
 
   .shipping-rates__field-group {
     display: flex;
-    gap: var(--gap-xs);
+    gap: var(--sr-gap-xs);
   }
 
   .shipping-rates__input {
     flex: 1 1 0%;
     min-width: 0;
-    height: var(--input-height);
-    padding-inline: var(--padding-sm);
-    border: 1px solid rgb(var(--color-foreground-rgb) / 0.2);
-    border-radius: var(--style-border-radius-inputs);
-    background-color: rgb(var(--color-background-rgb));
-    color: rgb(var(--color-foreground-rgb));
-    font-size: var(--font-paragraph--size);
-    line-height: var(--font-paragraph--line-height);
+    height: var(--sr-input-height);
+    padding-inline: var(--sr-pad-sm);
+    border: 1px solid rgb(var(--sr-fg-rgb) / 0.2);
+    border-radius: var(--sr-radius);
+    background-color: rgb(var(--sr-bg-rgb));
+    color: rgb(var(--sr-fg-rgb));
+    font-size: var(--sr-font-size);
+    line-height: var(--sr-line-height);
+    font-family: inherit;
     outline-offset: 2px;
   }
 
   .shipping-rates__input:focus-visible {
-    outline: 2px solid rgb(var(--color-foreground-rgb));
+    outline: 2px solid rgb(var(--sr-fg-rgb));
+  }
+
+  .shipping-rates__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--sr-input-height);
+    padding-inline: var(--sr-pad-sm);
+    background-color: var(--sr-accent);
+    color: var(--sr-accent-fg);
+    border: none;
+    border-radius: var(--sr-radius);
+    font-size: var(--sr-font-size-sm);
+    font-family: inherit;
+    font-weight: var(--sr-bold);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .shipping-rates__button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .shipping-rates__error {
     margin: 0;
-    font-size: var(--font-paragraph-small--size);
+    font-size: var(--sr-font-size-sm);
     color: var(--color-error, #c0392b);
   }
 
@@ -322,8 +371,8 @@
     padding: 0;
     display: grid;
     gap: 0;
-    border: 1px solid rgb(var(--color-foreground-rgb) / 0.1);
-    border-radius: var(--style-border-radius-inputs);
+    border: 1px solid rgb(var(--sr-fg-rgb) / 0.1);
+    border-radius: var(--sr-radius);
     overflow: hidden;
   }
 
@@ -331,11 +380,11 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    gap: var(--gap-sm);
-    padding: var(--padding-xs) var(--padding-sm);
-    font-size: var(--font-paragraph--size);
-    background-color: rgb(var(--color-foreground-rgb) / 0.02);
-    border-top: 1px solid rgb(var(--color-foreground-rgb) / 0.08);
+    gap: var(--sr-gap-sm);
+    padding: var(--sr-pad-xs) var(--sr-pad-sm);
+    font-size: var(--sr-font-size);
+    background-color: rgb(var(--sr-fg-rgb) / 0.02);
+    border-top: 1px solid rgb(var(--sr-fg-rgb) / 0.08);
   }
 
   .shipping-rates__item:first-child {
@@ -343,8 +392,8 @@
   }
 
   .shipping-rates__item--empty {
-    color: rgb(var(--color-foreground-rgb) / var(--opacity-subdued-text));
-    font-size: var(--font-paragraph-small--size);
+    color: rgb(var(--sr-fg-rgb) / var(--sr-subdued));
+    font-size: var(--sr-font-size-sm);
     justify-content: center;
   }
 
@@ -353,7 +402,7 @@
   }
 
   .shipping-rates__rate-price {
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--sr-medium);
     white-space: nowrap;
   }
 {% endstylesheet %}
