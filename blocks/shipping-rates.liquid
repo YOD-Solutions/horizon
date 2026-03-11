@@ -128,9 +128,8 @@
         {% for country in localization.available_countries %}"{{ country.iso_code }}"{% unless forloop.last %},{% endunless %}{% endfor %}
       ];
 
-      // Province lookup built from /services/countries.js.
-      // Format: { "AU": [["Australian Capital Territory","ACT"], ...], ... }
-      // Provinces are [name, code] pairs.
+      // Province lookup keyed by ISO code: { "AU": [{name, code}, ...], ... }
+      // Built from /services/countries.js after page load.
       var countriesData = {};
 
       var rateData = {
@@ -232,9 +231,7 @@
 
       function populateProvinces(countryCode, selectValue) {
         if (!provinceEl || !provinceGrpEl) return;
-        var raw = countriesData[countryCode] || [];
-        // /services/countries.js format: [["Province Name", "CODE"], ...]
-        var provinces = raw.map(function(p) { return { name: p[0], code: p[1] }; });
+        var provinces = countriesData[countryCode] || [];
 
         if (provinces.length === 0) {
           provinceGrpEl.hidden = true;
@@ -433,11 +430,18 @@
       fetch('/services/countries.js')
         .then(function(r) { return r.text(); })
         .then(function(text) {
-          // Response is: var Countries = {"AU":[["New South Wales","NSW"],...], ...};
-          // Extract the JSON object between the first { and last }
+          // Response: var Countries = {"Australia": {code:"AU", provinces:[...], province_codes:{...}}, ...}
+          // Keys are country names; code is the ISO code.
           var start = text.indexOf('{');
           var end   = text.lastIndexOf('}') + 1;
-          countriesData = JSON.parse(text.substring(start, end));
+          var raw = JSON.parse(text.substring(start, end));
+          Object.keys(raw).forEach(function(countryName) {
+            var c = raw[countryName];
+            var codes = c.province_codes || {};
+            countriesData[c.code] = (c.provinces || []).map(function(name) {
+              return { name: name, code: codes[name] || name };
+            });
+          });
         })
         .catch(function() { /* province data unavailable; widget still functional */ })
         .then(function() { init(); });
