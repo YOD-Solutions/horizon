@@ -254,6 +254,8 @@
         var provinces = countriesData[countryCode] || [];
 
         if (provinces.length === 0) {
+          provinceEl.innerHTML = '<option value="">Select\u2026</option>';
+          provinceEl.value = '';
           provinceGrpEl.hidden = true;
           rateData.rate.destination.province = null;
           return;
@@ -618,6 +620,10 @@
   .shipping-rates__field {
     display: grid;
     gap: var(--sr-pad-2xs);
+  }
+
+  .shipping-rates__field[hidden] {
+    display: none;
   }
 
   .shipping-rates__field-label {
