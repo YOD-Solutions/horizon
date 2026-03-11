@@ -39,11 +39,12 @@
     {% endif %}
 
     <form class="shipping-rates__form" id="jsrates-form-{{ block.id }}" novalidate>
-      <p class="shipping-rates__address-summary" id="jsrates-address-display-{{ block.id }}"></p>
-
       <details class="shipping-rates__advanced" id="jsrates-advanced-{{ block.id }}">
-        <summary class="shipping-rates__advanced-summary">
-          {{ block_settings.address_toggle_label | default: 'Change address' | escape }}
+        <summary class="shipping-rates__advanced-summary" aria-label="{{ block_settings.address_toggle_label | default: 'Change address' | escape }}">
+          <span class="shipping-rates__address-summary" id="jsrates-address-display-{{ block.id }}"></span>
+          <svg class="shipping-rates__edit-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+          </svg>
         </summary>
         <div class="shipping-rates__advanced-fields">
           {% if block_settings.show_country %}
@@ -523,10 +524,8 @@
   }
 
   .shipping-rates__address-summary {
-    margin: 0;
     font-size: var(--sr-font-size-sm);
     color: rgb(var(--sr-fg-rgb) / var(--sr-subdued));
-    min-height: 1.2em;
   }
 
   .shipping-rates__input {
@@ -590,8 +589,6 @@
     display: inline-flex;
     align-items: center;
     gap: var(--sr-gap-xs);
-    font-size: var(--sr-font-size-sm);
-    color: rgb(var(--sr-fg-rgb) / var(--sr-subdued));
     cursor: pointer;
     list-style: none;
     user-select: none;
@@ -601,14 +598,19 @@
     display: none;
   }
 
-  .shipping-rates__advanced-summary::after {
-    content: '\25BE'; /* ▾ */
-    font-size: 0.7em;
-    transition: transform 0.15s;
+  .shipping-rates__advanced-summary:hover .shipping-rates__address-summary {
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
-  .shipping-rates__advanced[open] .shipping-rates__advanced-summary::after {
-    transform: rotate(180deg);
+  .shipping-rates__edit-icon {
+    flex-shrink: 0;
+    color: rgb(var(--sr-fg-rgb) / 0.25);
+    transition: color 0.15s;
+  }
+
+  .shipping-rates__advanced-summary:hover .shipping-rates__edit-icon {
+    color: rgb(var(--sr-fg-rgb) / 0.6);
   }
 
   .shipping-rates__advanced-fields {
