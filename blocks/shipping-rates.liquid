@@ -9,6 +9,7 @@
     class="shipping-rates spacing-style"
     style="{% render 'spacing-style', settings: block_settings %}"
     {{ block.shopify_attributes }}
+    {% unless variant.requires_shipping %}hidden{% endunless %}
   >
     {% if block_settings.heading != blank %}
       <p class="shipping-rates__heading">{{ block_settings.heading | escape }}</p>
@@ -195,9 +196,11 @@
       }
 
       // --- Variant sync ---
+      var container = form.closest('.shipping-rates');
       document.addEventListener('variant:changed', function (e) {
         var v = e.detail && e.detail.variant;
         if (!v) return;
+        container.hidden = !v.requires_shipping;
         rateData.rate.items[0].grams = v.weight || 0;
         rateData.rate.items[0].price = v.price || 0;
         rateData.rate.items[0].sku = v.sku || '';
