@@ -2,7 +2,18 @@
   assign product_resource = closest.product
   assign block_settings = block.settings
   assign variant = product_resource.selected_or_first_available_variant
-  assign default_country = block_settings.default_country_code | default: localization.country.iso_code
+
+  assign default_country = block_settings.default_country_code
+  if default_country == blank
+    assign first_market_country = localization.available_countries | first
+    if first_market_country != blank
+      assign default_country = first_market_country.iso_code
+    endif
+  endif
+  if default_country == blank
+    assign default_country = localization.country.iso_code
+  endif
+
   assign show_address_toggle = false
   if block_settings.show_country or block_settings.show_province or block_settings.show_city
     assign show_address_toggle = true
@@ -314,13 +325,17 @@
                 city:       loc.city       || null,
                 postalCode: loc.postalCode || null
               });
-              // Persist the now-validated destination
+              // Persist the detected destination
               saveDestination({
                 country:    rateData.rate.destination.country,
                 regionCode: rateData.rate.destination.province,
                 city:       rateData.rate.destination.city,
                 postalCode: rateData.rate.destination.postal_code
               });
+              // Re-fetch with the now-known precise location
+              if (rateData.rate.destination.postal_code) {
+                return fetchRates(rateData.rate.destination.postal_code, false);
+              }
             }
             renderRates(data.rates);
           });
