@@ -14,10 +14,6 @@
     assign default_country = localization.country.iso_code
   endif
 
-  assign show_address_toggle = false
-  if block_settings.show_country or block_settings.show_province or block_settings.show_city
-    assign show_address_toggle = true
-  endif
 -%}
 
 {% unless product_resource == blank %}
@@ -43,72 +39,72 @@
     {% endif %}
 
     <form class="shipping-rates__form" id="jsrates-form-{{ block.id }}" novalidate>
-      <div class="shipping-rates__input-row">
-        <label class="shipping-rates__label" for="jsrates-zip-{{ block.id }}">
-          {{ block_settings.label | default: 'Postcode / ZIP' | escape }}
-        </label>
-        <div class="shipping-rates__field-group">
-          <input
-            class="shipping-rates__input"
-            type="text"
-            id="jsrates-zip-{{ block.id }}"
-            name="postal_code"
-            placeholder="{{ block_settings.placeholder | default: 'Enter postcode' | escape }}"
-            autocomplete="postal-code"
-            inputmode="text"
-            maxlength="20"
-          >
-          <button class="shipping-rates__button" type="submit">
-            {{ block_settings.button_label | default: 'Get rates' | escape }}
+      <p class="shipping-rates__address-summary" id="jsrates-address-display-{{ block.id }}"></p>
+
+      <details class="shipping-rates__advanced" id="jsrates-advanced-{{ block.id }}">
+        <summary class="shipping-rates__advanced-summary">
+          {{ block_settings.address_toggle_label | default: 'Change address' | escape }}
+        </summary>
+        <div class="shipping-rates__advanced-fields">
+          {% if block_settings.show_country %}
+            <div class="shipping-rates__field">
+              <label class="shipping-rates__field-label" for="jsrates-country-{{ block.id }}">Country</label>
+              <select class="shipping-rates__select" id="jsrates-country-{{ block.id }}">
+                {% for country in localization.available_countries %}
+                  <option
+                    value="{{ country.iso_code }}"
+                    {% if country.iso_code == default_country %}selected{% endif %}
+                  >{{ country.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          {% endif %}
+
+          {% if block_settings.show_province %}
+            <div class="shipping-rates__field" id="jsrates-province-group-{{ block.id }}" hidden>
+              <label class="shipping-rates__field-label" for="jsrates-province-{{ block.id }}">State / Province</label>
+              <select class="shipping-rates__select" id="jsrates-province-{{ block.id }}">
+                <option value="">Select...</option>
+              </select>
+            </div>
+          {% endif %}
+
+          {% if block_settings.show_city %}
+            <div class="shipping-rates__field">
+              <label class="shipping-rates__field-label" for="jsrates-city-{{ block.id }}">City</label>
+              <input
+                class="shipping-rates__input"
+                type="text"
+                id="jsrates-city-{{ block.id }}"
+                placeholder="City"
+                autocomplete="address-level2"
+              >
+            </div>
+          {% endif %}
+
+          <div class="shipping-rates__field">
+            <label class="shipping-rates__field-label" for="jsrates-zip-{{ block.id }}">
+              {{ block_settings.label | default: 'Postcode / ZIP' | escape }}
+            </label>
+            <input
+              class="shipping-rates__input"
+              type="text"
+              id="jsrates-zip-{{ block.id }}"
+              name="postal_code"
+              placeholder="{{ block_settings.placeholder | default: 'Enter postcode' | escape }}"
+              autocomplete="postal-code"
+              inputmode="text"
+              maxlength="20"
+            >
+          </div>
+
+          <button class="shipping-rates__button shipping-rates__button--full" type="submit">
+            {{ block_settings.button_label | default: 'Update address' | escape }}
           </button>
         </div>
-        <p class="shipping-rates__error" id="jsrates-error-{{ block.id }}" role="alert" hidden></p>
-      </div>
+      </details>
 
-      {% if show_address_toggle %}
-        <details class="shipping-rates__advanced" id="jsrates-advanced-{{ block.id }}">
-          <summary class="shipping-rates__advanced-summary">
-            {{ block_settings.address_toggle_label | default: 'Change address' | escape }}
-          </summary>
-          <div class="shipping-rates__advanced-fields">
-            {% if block_settings.show_country %}
-              <div class="shipping-rates__field">
-                <label class="shipping-rates__field-label" for="jsrates-country-{{ block.id }}">Country</label>
-                <select class="shipping-rates__select" id="jsrates-country-{{ block.id }}">
-                  {% for country in localization.available_countries %}
-                    <option
-                      value="{{ country.iso_code }}"
-                      {% if country.iso_code == default_country %}selected{% endif %}
-                    >{{ country.name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-            {% endif %}
-
-            {% if block_settings.show_province %}
-              <div class="shipping-rates__field" id="jsrates-province-group-{{ block.id }}" hidden>
-                <label class="shipping-rates__field-label" for="jsrates-province-{{ block.id }}">State / Province</label>
-                <select class="shipping-rates__select" id="jsrates-province-{{ block.id }}">
-                  <option value="">Select...</option>
-                </select>
-              </div>
-            {% endif %}
-
-            {% if block_settings.show_city %}
-              <div class="shipping-rates__field">
-                <label class="shipping-rates__field-label" for="jsrates-city-{{ block.id }}">City</label>
-                <input
-                  class="shipping-rates__input"
-                  type="text"
-                  id="jsrates-city-{{ block.id }}"
-                  placeholder="City"
-                  autocomplete="address-level2"
-                >
-              </div>
-            {% endif %}
-          </div>
-        </details>
-      {% endif %}
+      <p class="shipping-rates__error" id="jsrates-error-{{ block.id }}" role="alert" hidden></p>
     </form>
 
     <div class="shipping-rates__results" id="jsrates-results-{{ block.id }}" hidden>
@@ -125,10 +121,12 @@
       var errorEl      = document.getElementById('jsrates-error-'          + blockId);
       var resultsEl    = document.getElementById('jsrates-results-'        + blockId);
       var listEl       = document.getElementById('jsrates-list-'           + blockId);
-      var countryEl    = document.getElementById('jsrates-country-'        + blockId);
-      var provinceGrpEl= document.getElementById('jsrates-province-group-' + blockId);
-      var provinceEl   = document.getElementById('jsrates-province-'       + blockId);
-      var cityEl       = document.getElementById('jsrates-city-'           + blockId);
+      var addressDisplayEl = document.getElementById('jsrates-address-display-' + blockId);
+      var advancedEl       = document.getElementById('jsrates-advanced-'        + blockId);
+      var countryEl        = document.getElementById('jsrates-country-'         + blockId);
+      var provinceGrpEl    = document.getElementById('jsrates-province-group-'  + blockId);
+      var provinceEl       = document.getElementById('jsrates-province-'        + blockId);
+      var cityEl           = document.getElementById('jsrates-city-'            + blockId);
 
       var STORAGE_KEY    = 'jsrates_destination';
       var currencySymbol = {{ localization.country.currency.symbol | json }};
@@ -215,6 +213,17 @@
         errorEl.textContent = '';
       }
 
+      function updateAddressSummary() {
+        if (!addressDisplayEl) return;
+        var d = rateData.rate.destination;
+        var parts = [];
+        if (d.city)        parts.push(d.city);
+        if (d.province)    parts.push(d.province);
+        if (d.country)     parts.push(d.country);
+        if (d.postal_code) parts.push(d.postal_code);
+        addressDisplayEl.textContent = parts.join(', ');
+      }
+
       function renderRates(rates) {
         listEl.innerHTML = '';
         if (!rates || rates.length === 0) {
@@ -295,6 +304,8 @@
           rateData.rate.destination.postal_code = dest.postalCode;
           input.value = dest.postalCode;
         }
+
+        updateAddressSummary();
       }
 
       // --- Core fetch ---
@@ -404,6 +415,9 @@
         btn.textContent = '\u2026';
 
         fetchRates(zip, false)
+          .then(function () {
+            if (advancedEl) advancedEl.removeAttribute('open');
+          })
           .catch(function () {
             showError('Unable to retrieve shipping rates. Please try again.');
           })
@@ -418,6 +432,7 @@
         populateProvinces(rateData.rate.destination.country, rateData.rate.destination.province);
         if (cityEl && rateData.rate.destination.city) cityEl.value = rateData.rate.destination.city;
         if (!input.value && rateData.rate.destination.postal_code) input.value = rateData.rate.destination.postal_code;
+        updateAddressSummary();
 
         if (!rateData.rate.items[0].requires_shipping || !initialAvailable) return;
 
@@ -504,21 +519,16 @@
     line-height: var(--sr-line-height);
   }
 
-  .shipping-rates__label {
-    display: block;
+  .shipping-rates__address-summary {
+    margin: 0;
     font-size: var(--sr-font-size-sm);
     color: rgb(var(--sr-fg-rgb) / var(--sr-subdued));
-    margin-bottom: var(--sr-pad-2xs);
-  }
-
-  .shipping-rates__field-group {
-    display: flex;
-    gap: var(--sr-gap-xs);
+    min-height: 1.2em;
   }
 
   .shipping-rates__input {
-    flex: 1 1 0%;
-    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
     height: var(--sr-input-height);
     padding-inline: var(--sr-pad-sm);
     border: 1px solid rgb(var(--sr-fg-rgb) / 0.2);
@@ -555,6 +565,10 @@
   .shipping-rates__button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  .shipping-rates__button--full {
+    width: 100%;
   }
 
   .shipping-rates__error {
@@ -725,7 +739,7 @@
       "type": "text",
       "id": "button_label",
       "label": "Button label",
-      "default": "Get rates"
+      "default": "Update address"
     },
     {
       "type": "text",
