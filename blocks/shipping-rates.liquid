@@ -41,6 +41,10 @@
     <form class="shipping-rates__form" id="jsrates-form-{{ block.id }}" novalidate>
       <details class="shipping-rates__advanced" id="jsrates-advanced-{{ block.id }}">
         <summary class="shipping-rates__advanced-summary" aria-label="{{ block_settings.address_toggle_label | default: 'Change address' | escape }}">
+          <svg class="shipping-rates__map-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
           <span class="shipping-rates__address-summary" id="jsrates-address-display-{{ block.id }}"></span>
           <svg class="shipping-rates__edit-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
@@ -612,6 +616,11 @@
   .shipping-rates__advanced-summary:hover .shipping-rates__address-summary {
     text-decoration: underline;
     text-underline-offset: 2px;
+  }
+
+  .shipping-rates__map-icon {
+    flex-shrink: 0;
+    color: rgb(var(--sr-fg-rgb) / 0.4);
   }
 
   .shipping-rates__edit-icon {
