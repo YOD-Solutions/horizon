@@ -103,6 +103,14 @@
     <div class="shipping-rates__results" id="jsrates-results-{{ block.id }}" hidden>
       <ul class="shipping-rates__list" id="jsrates-list-{{ block.id }}"></ul>
     </div>
+
+    {%- comment -%}
+      Hidden select used only to extract province data from Shopify's
+      all_country_option_tags (each <option> carries data-provinces JSON).
+    {%- endcomment -%}
+    <select id="jsrates-all-countries-{{ block.id }}" aria-hidden="true" hidden tabindex="-1">
+      {{ all_country_option_tags }}
+    </select>
   </div>
 
   <script>
@@ -122,21 +130,26 @@
       var currencySymbol = {{ localization.country.currency.symbol | json }};
       var initialAvailable = {{ variant.available | json }};
 
-      // Countries and provinces from Shopify Markets.
-      // Requires countries to be explicitly added to named markets in
-      // Shopify Admin → Settings → Markets (not just "Rest of World").
-      var countriesData = [
-        {% for country in localization.available_countries %}
-        {
-          "iso_code": {{ country.iso_code | json }},
-          "name": {{ country.name | json }},
-          "provinces": [
-            {% for province in country.provinces %}
-            { "code": {{ province.code | json }}, "name": {{ province.name | json }} }{% unless forloop.last %},{% endunless %}
-            {% endfor %}
-          ]
-        }{% unless forloop.last %},{% endunless %}
-        {% endfor %}
+      // Build province lookup from the hidden all_country_option_tags select.
+      // Each <option> carries a data-provinces attribute with JSON: [["code","name"], ...]
+      // This works for all world countries, independent of Markets or login state.
+      var allCountriesEl = document.getElementById('jsrates-all-countries-' + blockId);
+      var countriesData = [];
+      if (allCountriesEl) {
+        Array.prototype.forEach.call(allCountriesEl.options, function(opt) {
+          var raw = opt.getAttribute('data-provinces');
+          var provinces = [];
+          try {
+            var parsed = JSON.parse(raw);
+            provinces = parsed.map(function(p) { return { code: p[0], name: p[1] }; });
+          } catch (e) {}
+          countriesData.push({ iso_code: opt.value, name: opt.textContent.trim(), provinces: provinces });
+        });
+      }
+
+      // Country codes available in Shopify Markets (for validating detected/saved country).
+      var availableCountryCodes = [
+        {% for country in localization.available_countries %}"{{ country.iso_code }}"{% unless forloop.last %},{% endunless %}{% endfor %}
       ];
 
       var rateData = {
@@ -240,7 +253,7 @@
       }
 
       function isCountryAvailable(isoCode) {
-        return !!getCountryData(isoCode);
+        return availableCountryCodes.indexOf(isoCode) !== -1;
       }
 
       function populateProvinces(countryCode, selectValue) {
