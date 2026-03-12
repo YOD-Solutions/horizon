@@ -175,6 +175,8 @@
     <div
       class="shipping-rates__results"
       id="jsrates-results-{{ block.id }}"
+      aria-live="polite"
+      aria-atomic="false"
       {% unless variant.requires_shipping and variant.available %}
         hidden
       {% endunless %}
@@ -374,6 +376,7 @@
       }
 
       function renderRates(rates) {
+        listEl.classList.remove('shipping-rates__list--loading');
         listEl.innerHTML = '';
         if (!rates || rates.length === 0) {
           listEl.innerHTML = '<li class="shipping-rates__item shipping-rates__item--empty">No shipping rates available for this location.</li>';
@@ -643,9 +646,20 @@
           .catch(function () { return [pageItem]; });
       }
 
+      // --- Debounce helper ---
+      function debounce(fn, delay) {
+        var timer;
+        return function () {
+          var args = arguments;
+          clearTimeout(timer);
+          timer = setTimeout(function () { fn.apply(null, args); }, delay);
+        };
+      }
+
       // --- Core fetch ---
       function fetchRates(zip, detectLocation) {
         resultsEl.hidden = false;
+        listEl.classList.add('shipping-rates__list--loading');
         return buildItemsPayload().then(function (items) {
         var payload = JSON.parse(JSON.stringify(rateData));
         if (zip) payload.rate.destination.postal_code = zip;
@@ -691,6 +705,7 @@
             renderRates(data.rates);
           })
           .catch(function (err) {
+            listEl.classList.remove('shipping-rates__list--loading');
             showError('Unable to retrieve shipping rates. Please try again.');
             throw err;
           });
@@ -721,6 +736,10 @@
 
       // --- Variant sync ---
       var container = form.closest('.shipping-rates');
+      var debouncedFetchRates = debounce(function (zip) {
+        fetchRates(zip, false).catch(function () {});
+      }, 400);
+
       // --- Variant sync (theme-agnostic) ---
       // Deduplicates changes from both signal sources below.
       function handleVariantChange(variantId) {
@@ -742,7 +761,7 @@
         rateData.rate.order_totals.total_price = v.price || 0;
         clearError();
         if (v.requires_shipping && v.available && isAddressReady()) {
-          fetchRates(rateData.rate.destination.postal_code, false).catch(function () {});
+          debouncedFetchRates(rateData.rate.destination.postal_code);
         } else {
           resultsEl.hidden = true;
         }
@@ -784,7 +803,7 @@
           rateData.rate.order_totals.subtotal_price = rateData.rate.items[0].price * qty;
           rateData.rate.order_totals.total_price    = rateData.rate.items[0].price * qty;
           if (rateData.rate.items[0].requires_shipping && isAddressReady()) {
-            fetchRates(rateData.rate.destination.postal_code, false).catch(function () {});
+            debouncedFetchRates(rateData.rate.destination.postal_code);
           }
         }
 
@@ -1253,6 +1272,13 @@
 
   .shipping-rates__show-more:hover {
     opacity: 0.8;
+  }
+
+  /* --- Refetch loading state --- */
+  .shipping-rates__list--loading {
+    opacity: 0.4;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
   }
 
   /* --- Skeleton loader --- */
