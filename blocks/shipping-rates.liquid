@@ -159,9 +159,21 @@
 
       var productTitle = {{ product_resource.title | json }};
       var currentVariantId = {{ variant.id }};
-      var variantsById = {};
-      {% for v in product_resource.variants %}variantsById[{{ v.id }}] = { id: {{ v.id }}, title: {{ v.title | json }}, price: {{ v.price }}, grams: {{ v.weight }}, sku: {{ v.sku | json }}, requires_shipping: {{ v.requires_shipping }}, taxable: {{ v.taxable }}, available: {{ v.available }}, fulfillment_service: {{ v.fulfillment_service | json }} };
-      {% endfor %}
+      var variantsById = {
+        {% for v in product_resource.variants %}
+          {{ v.id | json }}: {
+            "id":                  {{ v.id | json }},
+            "title":               {{ v.title | json }},
+            "price":               {{ v.price | json }},
+            "grams":               {{ v.weight | json }},
+            "sku":                 {{ v.sku | json }},
+            "requires_shipping":   {{ v.requires_shipping | json }},
+            "taxable":             {{ v.taxable | json }},
+            "available":           {{ v.available | json }},
+            "fulfillment_service": {{ v.fulfillment_service | json }}
+          }{% unless forloop.last %},{% endunless %}
+        {% endfor %}
+      };
 
       // Customer's Shopify default address (null when logged out or no address saved).
       var customerAddress = {% if customer and customer.default_address and customer.default_address.zip != blank %}
