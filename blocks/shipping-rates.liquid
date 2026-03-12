@@ -172,7 +172,13 @@
       <p class="shipping-rates__error" id="jsrates-error-{{ block.id }}" role="alert" hidden></p>
     </form>
 
-    <div class="shipping-rates__results" id="jsrates-results-{{ block.id }}"{% unless variant.requires_shipping and variant.available %} hidden{% endunless %}>
+    <div
+      class="shipping-rates__results"
+      id="jsrates-results-{{ block.id }}"
+      {% unless variant.requires_shipping and variant.available %}
+        hidden
+      {% endunless %}
+    >
       <ul class="shipping-rates__list" id="jsrates-list-{{ block.id }}">
         {%- liquid
           assign skeleton_count = block_settings.max_rates | plus: 0
@@ -1248,8 +1254,13 @@
 
   /* --- Skeleton loader --- */
   @keyframes sr-skeleton-pulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.4; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
   }
 
   .shipping-rates__item--skeleton {
@@ -1276,10 +1287,19 @@
     animation: sr-skeleton-pulse 1.4s ease-in-out infinite;
   }
 
-  .shipping-rates__skeleton--name  { width: 52%; }
-  .shipping-rates__skeleton--price { width: 14%; margin-left: auto; }
-  .shipping-rates__skeleton--date  { width: 28%; }
-  .shipping-rates__skeleton--desc  { width: 65%; }
+  .shipping-rates__skeleton--name {
+    width: 52%;
+  }
+  .shipping-rates__skeleton--price {
+    width: 14%;
+    margin-left: auto;
+  }
+  .shipping-rates__skeleton--date {
+    width: 28%;
+  }
+  .shipping-rates__skeleton--desc {
+    width: 65%;
+  }
 {% endstylesheet %}
 
 {% schema %}
@@ -1460,7 +1480,7 @@
       "min": 0,
       "max": 10,
       "step": 1,
-      "default": 1
+      "default": 4
     },
     {
       "type": "select",
