@@ -331,7 +331,7 @@
 
       function populateProvinces(countryCode, selectValue) {
         if (!provinceEl || !provinceGrpEl) return;
-        var provinces = countriesData[countryCode] || [];
+        var provinces = (countriesData[countryCode] && countriesData[countryCode].provinces) || [];
 
         if (provinces.length === 0) {
           provinceEl.innerHTML = '<option value="">Select\u2026</option>';
@@ -393,14 +393,15 @@
       // --- Cart cache (only used when include_cart_items is enabled) ---
       // Cached until a cart-mutating request completes, then invalidated.
       var includeCartItems   = {{ block_settings.include_cart_items | json }};
-      var requireProvince    = {{ block_settings.require_province | json }};
-      var requireCity        = {{ block_settings.require_city | json }};
-      var requirePostalCode  = {{ block_settings.require_postal_code | json }};
+      var requireProvince = {{ block_settings.require_province | json }};
+      var requireCity     = {{ block_settings.require_city | json }};
 
       function isAddressReady() {
-        if (requireProvince   && !rateData.rate.destination.province)     return false;
-        if (requireCity       && !rateData.rate.destination.city)         return false;
-        if (requirePostalCode && !rateData.rate.destination.postal_code)  return false;
+        var country = countriesData[rateData.rate.destination.country];
+        var zipRequired = country ? country.zip_required : true;
+        if (zipRequired    && !rateData.rate.destination.postal_code) return false;
+        if (requireProvince && !rateData.rate.destination.province)   return false;
+        if (requireCity     && !rateData.rate.destination.city)       return false;
         return true;
       }
 
@@ -754,9 +755,12 @@
           Object.keys(raw).forEach(function(countryName) {
             var c = raw[countryName];
             var codes = c.province_codes || {};
-            countriesData[c.code] = (c.provinces || []).map(function(name) {
-              return { name: name, code: codes[name] || name };
-            });
+            countriesData[c.code] = {
+              zip_required: c.zip_required !== false,
+              provinces: (c.provinces || []).map(function(name) {
+                return { name: name, code: codes[name] || name };
+              })
+            };
           });
         })
         .catch(function() { /* province data unavailable; widget still functional */ })
@@ -1114,12 +1118,6 @@
       "id": "require_city",
       "label": "City required",
       "default": false
-    },
-    {
-      "type": "checkbox",
-      "id": "require_postal_code",
-      "label": "Postcode / ZIP required",
-      "default": true
     },
     {
       "type": "header",
