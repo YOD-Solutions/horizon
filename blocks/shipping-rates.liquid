@@ -410,12 +410,14 @@
       // Deduplicates changes from both signal sources below.
       function handleVariantChange(variantId) {
         var id = parseInt(variantId, 10);
-        if (!id || id === currentVariantId) return;
+        console.log('[JsRates] variant change:', variantId, '| current:', currentVariantId, '| postal_code:', rateData.rate.destination.postal_code);
+        if (!id || id === currentVariantId) { console.log('[JsRates] skipped (same or invalid)'); return; }
         currentVariantId = id;
         fetch('/variants/' + id + '.json')
           .then(function (r) { return r.json(); })
           .then(function (data) {
             var v = data.variant;
+            console.log('[JsRates] variant data:', v ? { id: v.id, requires_shipping: v.requires_shipping, available: v.available } : 'null');
             if (!v) return;
             container.hidden = !v.requires_shipping || !v.available;
             rateData.rate.items[0].name = productTitle + (v.title && v.title !== 'Default Title' ? ' - ' + v.title : '');
@@ -429,26 +431,27 @@
             rateData.rate.order_totals.total_price = v.price || 0;
             clearError();
             if (v.requires_shipping && v.available && rateData.rate.destination.postal_code) {
-              fetchRates(rateData.rate.destination.postal_code, false).catch(function () {});
+              console.log('[JsRates] fetching rates for zip:', rateData.rate.destination.postal_code);
+              fetchRates(rateData.rate.destination.postal_code, false).catch(function (e) { console.error('[JsRates] fetchRates failed:', e); });
             } else {
+              console.log('[JsRates] no rate fetch — requires_shipping:', v.requires_shipping, 'available:', v.available, 'postal_code:', rateData.rate.destination.postal_code);
               resultsEl.hidden = true;
             }
           })
-          .catch(function () {});
+          .catch(function (e) { console.error('[JsRates] /variants fetch failed:', e); });
       }
 
       // Signal 1: Poll location.search for ?variant= changes (300ms).
-      // Works on every theme regardless of how or when the URL is updated —
-      // pushState, replaceState, scheduler.yield, requestIdleCallback, etc.
       (function () {
         var lastSearch = location.search;
         setInterval(function () {
           if (location.search === lastSearch) return;
+          console.log('[JsRates] URL changed:', lastSearch, '→', location.search);
           lastSearch = location.search;
           try {
             var id = new URLSearchParams(location.search).get('variant');
             if (id) handleVariantChange(id);
-          } catch (e) {}
+          } catch (e) { console.error('[JsRates] URL parse error:', e); }
         }, 300);
       }());
 
