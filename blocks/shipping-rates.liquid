@@ -390,16 +390,49 @@
         updateAddressSummary();
       }
 
-      // --- Items payload builder ---
+      // --- Cart cache (only used when include_cart_items is enabled) ---
+      // Cached until a cart-mutating request completes, then invalidated.
       var includeCartItems = {{ block_settings.include_cart_items | json }};
+      var cartCache = { data: null, promise: null };
 
+      // Invalidate cache whenever any cart mutation endpoint responds.
+      (function () {
+        var _fetch = window.fetch;
+        window.fetch = function (input) {
+          var url = typeof input === 'string' ? input : (input && input.url) || '';
+          var p = _fetch.apply(this, arguments);
+          if (/\/cart\/(add|change|update|clear)/.test(url)) {
+            p.then(function () { cartCache.data = null; cartCache.promise = null; })
+             .catch(function () {});
+          }
+          return p;
+        };
+      }());
+
+      function getCartItems() {
+        if (cartCache.data)    return Promise.resolve(cartCache.data);
+        if (cartCache.promise) return cartCache.promise;
+        cartCache.promise = fetch('/cart.js')
+          .then(function (r) { return r.json(); })
+          .then(function (cart) {
+            cartCache.data    = cart.items || [];
+            cartCache.promise = null;
+            return cartCache.data;
+          })
+          .catch(function () {
+            cartCache.promise = null;
+            return [];
+          });
+        return cartCache.promise;
+      }
+
+      // --- Items payload builder ---
       function buildItemsPayload() {
         var pageItem = rateData.rate.items[0];
         if (!includeCartItems) return Promise.resolve([pageItem]);
-        return fetch('/cart.js')
-          .then(function (r) { return r.json(); })
-          .then(function (cart) {
-            var items = (cart.items || []).map(function (ci) {
+        return getCartItems()
+          .then(function (cartItems) {
+            var items = cartItems.map(function (ci) {
               return {
                 name:                ci.title,
                 sku:                 ci.sku || '',
