@@ -354,11 +354,55 @@
         updateAddressSummary();
       }
 
+      // --- Items payload builder ---
+      var includeCartItems = {{ block_settings.include_cart_items | json }};
+
+      function buildItemsPayload() {
+        var pageItem = rateData.rate.items[0];
+        if (!includeCartItems) return Promise.resolve([pageItem]);
+        return fetch('/cart.js')
+          .then(function (r) { return r.json(); })
+          .then(function (cart) {
+            var items = (cart.items || []).map(function (ci) {
+              return {
+                name:                ci.title,
+                sku:                 ci.sku || '',
+                grams:               ci.grams,
+                quantity:            ci.quantity,
+                price:               ci.price,
+                vendor:              ci.vendor || '',
+                requires_shipping:   ci.requires_shipping,
+                taxable:             ci.taxable,
+                fulfillment_service: ci.fulfillment_service || 'manual',
+                properties:          {},
+                product_id:          ci.product_id,
+                variant_id:          ci.variant_id
+              };
+            });
+            // Merge page item: add quantity if same variant already in cart, otherwise append.
+            var found = false;
+            for (var i = 0; i < items.length; i++) {
+              if (items[i].variant_id === pageItem.variant_id) {
+                items[i].quantity += pageItem.quantity;
+                found = true;
+                break;
+              }
+            }
+            if (!found) items.push(pageItem);
+            return items;
+          })
+          .catch(function () { return [pageItem]; });
+      }
+
       // --- Core fetch ---
       function fetchRates(zip, detectLocation) {
+        return buildItemsPayload().then(function (items) {
         var payload = JSON.parse(JSON.stringify(rateData));
         if (zip) payload.rate.destination.postal_code = zip;
         if (detectLocation) payload.rate._detectLocation = true;
+        payload.rate.items = items;
+        payload.rate.order_totals.subtotal_price = items.reduce(function (s, i) { return s + i.price * i.quantity; }, 0);
+        payload.rate.order_totals.total_price    = payload.rate.order_totals.subtotal_price;
 
         return fetch({{ block_settings.api_endpoint | json }}, {
           method: 'POST',
@@ -396,6 +440,7 @@
             }
             renderRates(data.rates);
           });
+        }); // end buildItemsPayload
       }
 
       // --- Address field event listeners ---
@@ -893,6 +938,13 @@
       "id": "api_key",
       "label": "JsRates API key",
       "info": "API key from JsRates Settings → API. Enable domain whitelisting to restrict access."
+    },
+    {
+      "type": "checkbox",
+      "id": "include_cart_items",
+      "label": "Include cart items",
+      "info": "Calculate shipping for the full cart plus this product, not just this product alone.",
+      "default": false
     },
     {
       "type": "header",
