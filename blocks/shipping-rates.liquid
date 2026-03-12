@@ -45,14 +45,17 @@
       hidden
     {% endunless %}
   >
-    {% if block_settings.heading != blank %}
+    {% if block_settings.show_heading and block_settings.heading != blank %}
       <p class="shipping-rates__heading{% if block_settings.heading_bold %} shipping-rates__heading--bold{% endif %}">
         {{ block_settings.heading | escape }}
       </p>
     {% endif %}
 
     <form class="shipping-rates__form" id="jsrates-form-{{ block.id }}" novalidate>
-      <details class="shipping-rates__advanced" id="jsrates-advanced-{{ block.id }}">
+      <details
+        class="shipping-rates__advanced{% unless block_settings.show_heading %} shipping-rates__advanced--no-heading{% endunless %}"
+        id="jsrates-advanced-{{ block.id }}"
+      >
         <summary class="shipping-rates__advanced-summary">
           <svg
             class="shipping-rates__map-icon"
@@ -1013,6 +1016,11 @@
     padding-top: var(--sr-pad-xs);
   }
 
+  .shipping-rates__advanced--no-heading {
+    border-top: none;
+    padding-top: 0;
+  }
+
   .shipping-rates__advanced-summary {
     display: inline-flex;
     align-items: center;
@@ -1244,6 +1252,12 @@
     {
       "type": "header",
       "content": "Labels"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_heading",
+      "label": "Show heading",
+      "default": false
     },
     {
       "type": "checkbox",
