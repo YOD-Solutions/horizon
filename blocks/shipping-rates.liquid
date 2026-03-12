@@ -172,7 +172,7 @@
       <p class="shipping-rates__error" id="jsrates-error-{{ block.id }}" role="alert" hidden></p>
     </form>
 
-    <div class="shipping-rates__results" id="jsrates-results-{{ block.id }}" hidden>
+    <div class="shipping-rates__results" id="jsrates-results-{{ block.id }}"{% unless variant.requires_shipping and variant.available %} hidden{% endunless %}>
       <ul class="shipping-rates__list" id="jsrates-list-{{ block.id }}">
         {%- liquid
           assign skeleton_count = block_settings.max_rates | plus: 0
