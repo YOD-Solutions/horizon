@@ -435,35 +435,52 @@
         }
       }
 
-      // Signal 1: Poll location.search for ?variant= changes (300ms).
+      // --- Variant change detection (theme-agnostic, event-driven) ---
       (function () {
-        var lastSearch = location.search;
-        setInterval(function () {
-          if (location.search === lastSearch) return;
-          lastSearch = location.search;
-          try {
-            var id = new URLSearchParams(location.search).get('variant');
-            if (id) handleVariantChange(id);
-          } catch (e) {}
-        }, 300);
-      }());
+        var productSection = container.closest('[data-section-id]') || container.closest('section') || document.body;
 
-      // Signal 2: input[name="id"] setter — fallback for themes that skip URL updates
-      (function () {
+        // Signal 1: intercept input[name="id"] setter — catches programmatic updates
+        // from any modern theme (Horizon, Dawn, Sense, etc.).
         try {
-          var productSection = container.closest('[data-section-id]') || container.closest('section') || document;
           var variantInput = productSection.querySelector('input[name="id"]')
                           || document.querySelector('form[action*="/cart/add"] input[name="id"]');
-          if (!variantInput) return;
-          var proto = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
-          Object.defineProperty(variantInput, 'value', {
-            get: proto.get,
-            set: function (val) {
-              proto.set.call(this, val);
-              if (val) handleVariantChange(val);
-            }
-          });
+          if (variantInput) {
+            var proto = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+            Object.defineProperty(variantInput, 'value', {
+              configurable: true,
+              get: proto.get,
+              set: function (val) {
+                proto.set.call(this, val);
+                if (val) handleVariantChange(val);
+              }
+            });
+          }
         } catch (e) {}
+
+        // Signal 2: change event — catches classic themes using <select name="id">.
+        productSection.addEventListener('change', function (e) {
+          if (e.target && e.target.name === 'id') handleVariantChange(e.target.value);
+        });
+
+        // Signal 3: history intercept — catches pushState/replaceState calls.
+        // Covers Horizon, Dawn, and any theme that updates ?variant= in the URL.
+        (function () {
+          function fromUrl(url) {
+            try {
+              var id = new URLSearchParams(new URL(String(url), location.origin).search).get('variant');
+              if (id) handleVariantChange(id);
+            } catch (e) {}
+          }
+          ['pushState', 'replaceState'].forEach(function (method) {
+            var original = history[method];
+            history[method] = function (state, title, url) {
+              original.apply(this, arguments);
+              if (url) fromUrl(url);
+            };
+          });
+          // Signal 4: popstate — catches back/forward browser navigation.
+          window.addEventListener('popstate', function () { fromUrl(location.href); });
+        }());
       }());
 
       // --- Manual submit ---
