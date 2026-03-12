@@ -689,6 +689,10 @@
               }
             }
             renderRates(data.rates);
+          })
+          .catch(function (err) {
+            showError('Unable to retrieve shipping rates. Please try again.');
+            throw err;
           });
         }); // end buildItemsPayload
       }
@@ -864,7 +868,6 @@
             restoreBtn();
           })
           .catch(function () {
-            showError('Unable to retrieve shipping rates. Please try again.');
             restoreBtn();
           });
       });
