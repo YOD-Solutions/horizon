@@ -410,7 +410,7 @@
                 requires_shipping:   ci.requires_shipping,
                 taxable:             ci.taxable,
                 fulfillment_service: ci.fulfillment_service || 'manual',
-                properties:          {},
+                properties:          ci.properties || {},
                 product_id:          ci.product_id,
                 variant_id:          ci.variant_id
               };
