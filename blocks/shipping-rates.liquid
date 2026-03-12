@@ -113,7 +113,12 @@
 
           {% if block_settings.show_province %}
             <div class="shipping-rates__field" id="jsrates-province-group-{{ block.id }}" hidden>
-              <label class="shipping-rates__field-label" id="jsrates-province-label-{{ block.id }}" for="jsrates-province-{{ block.id }}">State / Province</label>
+              <label
+                class="shipping-rates__field-label"
+                id="jsrates-province-label-{{ block.id }}"
+                for="jsrates-province-{{ block.id }}"
+                >State / Province</label
+              >
               <select class="shipping-rates__select" id="jsrates-province-{{ block.id }}">
                 <option value="">Select...</option>
               </select>
@@ -135,7 +140,11 @@
 
           {% if block_settings.show_zip %}
             <div class="shipping-rates__field" id="jsrates-zip-field-{{ block.id }}">
-              <label class="shipping-rates__field-label" id="jsrates-zip-label-{{ block.id }}" for="jsrates-zip-{{ block.id }}">
+              <label
+                class="shipping-rates__field-label"
+                id="jsrates-zip-label-{{ block.id }}"
+                for="jsrates-zip-{{ block.id }}"
+              >
                 {{ block_settings.label | default: 'Postcode / ZIP' | escape }}
               </label>
               <input
@@ -1360,7 +1369,7 @@
       "type": "checkbox",
       "id": "show_description",
       "label": "Show rate description",
-      "default": false
+      "default": true
     },
     {
       "type": "range",
@@ -1370,7 +1379,7 @@
       "min": 0,
       "max": 10,
       "step": 1,
-      "default": 5
+      "default": 1
     },
     {
       "type": "select",
@@ -1382,7 +1391,7 @@
         { "value": "price_desc", "label": "Price: high to low" },
         { "value": "delivery_asc", "label": "Delivery: soonest first" }
       ],
-      "default": "default"
+      "default": "delivery_asc"
     },
     {
       "type": "checkbox",
@@ -1394,7 +1403,7 @@
       "type": "checkbox",
       "id": "highlight_fastest",
       "label": "Badge: fastest delivery",
-      "default": false
+      "default": true
     },
     {
       "type": "header",
