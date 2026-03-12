@@ -310,7 +310,7 @@
       function formatDeliveryDate(dateStr) {
         if (!dateStr) return '';
         var d = new Date(dateStr);
-        if (isNaN(d.getTime())) return dateStr;
+        if (isNaN(d.getTime())) return '';
         return d.toLocaleDateString(navigator.language || undefined, { month: 'short', day: 'numeric' });
       }
 
@@ -374,14 +374,16 @@
           var minDate = rate.min_delivery_date || '';
           var maxDate = rate.max_delivery_date || '';
           var deliveryHtml = '';
-          if (showDeliveryDates && (minDate || maxDate)) {
-            var dateText;
-            if (minDate && maxDate && minDate !== maxDate) {
-              dateText = formatDeliveryDate(minDate) + ' – ' + formatDeliveryDate(maxDate);
+          if (showDeliveryDates) {
+            var minFmt = formatDeliveryDate(minDate);
+            var maxFmt = formatDeliveryDate(maxDate);
+            var dateText = '';
+            if (minFmt && maxFmt && minFmt !== maxFmt) {
+              dateText = minFmt + ' \u2013 ' + maxFmt;
             } else {
-              dateText = formatDeliveryDate(minDate || maxDate);
+              dateText = minFmt || maxFmt;
             }
-            deliveryHtml = '<span class="shipping-rates__rate-delivery">' + dateText + '</span>';
+            if (dateText) deliveryHtml = '<span class="shipping-rates__rate-delivery">' + dateText + '</span>';
           }
 
           var descHtml = '';
