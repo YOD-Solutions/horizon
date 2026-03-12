@@ -173,7 +173,32 @@
     </form>
 
     <div class="shipping-rates__results" id="jsrates-results-{{ block.id }}" hidden>
-      <ul class="shipping-rates__list" id="jsrates-list-{{ block.id }}"></ul>
+      <ul class="shipping-rates__list" id="jsrates-list-{{ block.id }}">
+        {%- liquid
+          assign skeleton_count = block_settings.max_rates | plus: 0
+          if skeleton_count == 0
+            assign skeleton_count = 3
+          endif
+        -%}
+        {%- for i in (1..skeleton_count) %}
+          <li class="shipping-rates__item shipping-rates__item--skeleton">
+            <div class="shipping-rates__rate-primary">
+              <span class="shipping-rates__skeleton shipping-rates__skeleton--name"></span>
+              <span class="shipping-rates__skeleton shipping-rates__skeleton--price"></span>
+            </div>
+            {%- if block_settings.show_delivery_dates or block_settings.show_description %}
+              <div class="shipping-rates__rate-secondary">
+                {%- if block_settings.show_delivery_dates %}
+                  <span class="shipping-rates__skeleton shipping-rates__skeleton--date"></span>
+                {%- endif %}
+                {%- if block_settings.show_description %}
+                  <span class="shipping-rates__skeleton shipping-rates__skeleton--desc"></span>
+                {%- endif %}
+              </div>
+            {%- endif %}
+          </li>
+        {%- endfor %}
+      </ul>
     </div>
   </div>
 
@@ -614,6 +639,7 @@
 
       // --- Core fetch ---
       function fetchRates(zip, detectLocation) {
+        resultsEl.hidden = false;
         return buildItemsPayload().then(function (items) {
         var payload = JSON.parse(JSON.stringify(rateData));
         if (zip) payload.rate.destination.postal_code = zip;
@@ -694,13 +720,14 @@
         if (!v) return;
         currentVariantId = id;
         container.hidden = !v.requires_shipping || !v.available;
-        rateData.rate.items[0].name = productTitle + (v.title && v.title !== 'Default Title' ? ' - ' + v.title : '');
-        rateData.rate.items[0].grams = v.grams || 0;
-        rateData.rate.items[0].price = v.price || 0;
-        rateData.rate.items[0].sku = v.sku || '';
-        rateData.rate.items[0].requires_shipping = v.requires_shipping;
-        rateData.rate.items[0].taxable = v.taxable;
-        rateData.rate.items[0].variant_id = v.id;
+        rateData.rate.items[0].name                = productTitle + (v.title && v.title !== 'Default Title' ? ' - ' + v.title : '');
+        rateData.rate.items[0].grams               = v.grams || 0;
+        rateData.rate.items[0].price               = v.price || 0;
+        rateData.rate.items[0].sku                 = v.sku || '';
+        rateData.rate.items[0].requires_shipping   = v.requires_shipping;
+        rateData.rate.items[0].taxable             = v.taxable;
+        rateData.rate.items[0].fulfillment_service = v.fulfillment_service || 'manual';
+        rateData.rate.items[0].variant_id          = v.id;
         rateData.rate.order_totals.subtotal_price = v.price || 0;
         rateData.rate.order_totals.total_price = v.price || 0;
         clearError();
@@ -1218,6 +1245,29 @@
   .shipping-rates__show-more:hover {
     opacity: 0.8;
   }
+
+  /* --- Skeleton loader --- */
+  @keyframes sr-skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
+  .shipping-rates__item--skeleton {
+    pointer-events: none;
+  }
+
+  .shipping-rates__skeleton {
+    display: inline-block;
+    height: 0.75em;
+    border-radius: 3px;
+    background-color: var(--sr-fg-faint);
+    animation: sr-skeleton-pulse 1.4s ease-in-out infinite;
+  }
+
+  .shipping-rates__skeleton--name  { width: 52%; }
+  .shipping-rates__skeleton--price { width: 14%; margin-left: auto; }
+  .shipping-rates__skeleton--date  { width: 28%; }
+  .shipping-rates__skeleton--desc  { width: 65%; }
 {% endstylesheet %}
 
 {% schema %}
