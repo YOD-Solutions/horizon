@@ -307,23 +307,121 @@
         addressDisplayEl.textContent = parts.join(', ');
       }
 
+      function formatDeliveryDate(dateStr) {
+        if (!dateStr) return '';
+        var d = new Date(dateStr + 'T00:00:00');
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      }
+
+      function sortRates(rates) {
+        var sorted = rates.slice();
+        if (ratesSort === 'price_asc') {
+          sorted.sort(function (a, b) { return a.total_price - b.total_price; });
+        } else if (ratesSort === 'price_desc') {
+          sorted.sort(function (a, b) { return b.total_price - a.total_price; });
+        } else if (ratesSort === 'delivery_asc') {
+          sorted.sort(function (a, b) {
+            var da = a.min_delivery_date || a.max_delivery_date || '9999-99-99';
+            var db = b.min_delivery_date || b.max_delivery_date || '9999-99-99';
+            return da < db ? -1 : da > db ? 1 : 0;
+          });
+        }
+        return sorted;
+      }
+
       function renderRates(rates) {
         listEl.innerHTML = '';
         if (!rates || rates.length === 0) {
           listEl.innerHTML = '<li class="shipping-rates__item shipping-rates__item--empty">No shipping rates available for this location.</li>';
-        } else {
-          rates.forEach(function (rate) {
-            var li = document.createElement('li');
-            li.className = 'shipping-rates__item';
-            var isFree = rate.total_price === 0;
-            var price = isFree ? 'Free' : currencySymbol + formatMoney(rate.total_price);
-            var priceClass = 'shipping-rates__rate-price' + (isFree ? ' shipping-rates__rate-price--free' : '');
-            li.innerHTML =
-              '<span class="shipping-rates__rate-name">' + rate.service_name + '</span>' +
-              '<span class="' + priceClass + '">' + price + '</span>';
-            listEl.appendChild(li);
+          resultsEl.hidden = false;
+          return;
+        }
+
+        var sorted = sortRates(rates);
+
+        // Identify cheapest and fastest for badge highlighting
+        var cheapestIdx = -1, fastestIdx = -1;
+        if (highlightCheapest) {
+          var minPrice = Infinity;
+          sorted.forEach(function (r, i) {
+            if (r.total_price < minPrice) { minPrice = r.total_price; cheapestIdx = i; }
           });
         }
+        if (highlightFastest) {
+          var minDate = '9999-99-99';
+          sorted.forEach(function (r, i) {
+            var d = r.min_delivery_date || r.max_delivery_date || '';
+            if (d && d < minDate) { minDate = d; fastestIdx = i; }
+          });
+        }
+
+        var limit = (maxRates > 0 && maxRates < sorted.length) ? maxRates : sorted.length;
+        var visible = sorted.slice(0, limit);
+        var hidden  = sorted.slice(limit);
+
+        function buildItem(rate, idx) {
+          var li = document.createElement('li');
+          li.className = 'shipping-rates__item';
+          var isFree = rate.total_price === 0;
+          var price = isFree ? 'Free' : currencySymbol + formatMoney(rate.total_price);
+          var priceClass = 'shipping-rates__rate-price' + (isFree ? ' shipping-rates__rate-price--free' : '');
+
+          var badges = '';
+          if (idx === cheapestIdx) badges += '<span class="shipping-rates__badge shipping-rates__badge--cheapest">Best price</span>';
+          if (idx === fastestIdx)  badges += '<span class="shipping-rates__badge shipping-rates__badge--fastest">Fastest</span>';
+
+          var minDate = rate.min_delivery_date || '';
+          var maxDate = rate.max_delivery_date || '';
+          var deliveryHtml = '';
+          if (showDeliveryDates && (minDate || maxDate)) {
+            var dateText;
+            if (minDate && maxDate && minDate !== maxDate) {
+              dateText = formatDeliveryDate(minDate) + ' – ' + formatDeliveryDate(maxDate);
+            } else {
+              dateText = formatDeliveryDate(minDate || maxDate);
+            }
+            deliveryHtml = '<span class="shipping-rates__rate-delivery">' + dateText + '</span>';
+          }
+
+          var descHtml = '';
+          if (showDescription && rate.description) {
+            descHtml = '<span class="shipping-rates__rate-desc">' + rate.description + '</span>';
+          }
+
+          li.innerHTML =
+            '<div class="shipping-rates__rate-primary">' +
+              '<span class="shipping-rates__rate-name">' + rate.service_name + '</span>' +
+              (badges ? '<span class="shipping-rates__rate-badges">' + badges + '</span>' : '') +
+              '<span class="' + priceClass + '">' + price + '</span>' +
+            '</div>' +
+            (deliveryHtml || descHtml
+              ? '<div class="shipping-rates__rate-secondary">' + deliveryHtml + descHtml + '</div>'
+              : '');
+          return li;
+        }
+
+        visible.forEach(function (rate, i) {
+          listEl.appendChild(buildItem(rate, i));
+        });
+
+        if (hidden.length > 0) {
+          var showMoreLi = document.createElement('li');
+          showMoreLi.className = 'shipping-rates__item shipping-rates__item--show-more';
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'shipping-rates__show-more';
+          btn.textContent = 'Show ' + hidden.length + ' more option' + (hidden.length > 1 ? 's' : '');
+          btn.addEventListener('click', function () {
+            hidden.forEach(function (rate, i) {
+              listEl.insertBefore(buildItem(rate, limit + i), showMoreLi);
+            });
+            showMoreLi.remove();
+          });
+          showMoreLi.appendChild(btn);
+          listEl.appendChild(showMoreLi);
+        }
+
         resultsEl.hidden = false;
       }
 
@@ -407,6 +505,14 @@
       var includeCartItems   = {{ block_settings.include_cart_items | json }};
       var requireProvince = {{ block_settings.require_province | json }};
       var requireCity     = {{ block_settings.require_city | json }};
+
+      // Rate display settings
+      var showDeliveryDates  = {{ block_settings.show_delivery_dates | json }};
+      var showDescription    = {{ block_settings.show_description | json }};
+      var maxRates           = {{ block_settings.max_rates | default: 5 | json }};
+      var ratesSort          = {{ block_settings.rates_sort | default: 'default' | json }};
+      var highlightCheapest  = {{ block_settings.highlight_cheapest | json }};
+      var highlightFastest   = {{ block_settings.highlight_fastest | json }};
 
       function isAddressReady() {
         var country = countriesData[rateData.rate.destination.country];
@@ -987,9 +1093,9 @@
 
   .shipping-rates__item {
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: var(--sr-gap-sm);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
     padding: var(--sr-pad-xs) var(--sr-pad-sm);
     font-size: var(--sr-font-size);
     background-color: var(--sr-fg-xfaint);
@@ -1003,7 +1109,13 @@
   .shipping-rates__item--empty {
     color: var(--sr-fg-subdued);
     font-size: var(--sr-font-size-sm);
-    justify-content: center;
+    align-items: center;
+  }
+
+  .shipping-rates__rate-primary {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sr-gap-sm);
   }
 
   .shipping-rates__rate-name {
@@ -1017,6 +1129,70 @@
 
   .shipping-rates__rate-price--free {
     color: var(--sr-accent);
+  }
+
+  .shipping-rates__rate-badges {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .shipping-rates__badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 0.7em;
+    font-weight: var(--sr-bold);
+    white-space: nowrap;
+    line-height: 1.6;
+  }
+
+  .shipping-rates__badge--cheapest {
+    background-color: color-mix(in srgb, var(--sr-accent) 15%, transparent);
+    color: var(--sr-accent);
+  }
+
+  .shipping-rates__badge--fastest {
+    background-color: color-mix(in srgb, var(--sr-fg) 10%, transparent);
+    color: var(--sr-fg-subdued);
+  }
+
+  .shipping-rates__rate-secondary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--sr-gap-sm);
+    margin-top: 2px;
+  }
+
+  .shipping-rates__rate-delivery {
+    font-size: var(--sr-font-size-sm);
+    color: var(--sr-fg-subdued);
+  }
+
+  .shipping-rates__rate-desc {
+    font-size: var(--sr-font-size-sm);
+    color: var(--sr-fg-muted);
+  }
+
+  .shipping-rates__item--show-more {
+    justify-content: center;
+    background-color: transparent;
+  }
+
+  .shipping-rates__show-more {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--sr-accent);
+    font-size: var(--sr-font-size-sm);
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .shipping-rates__show-more:hover {
+    opacity: 0.8;
   }
 {% endstylesheet %}
 
@@ -1167,6 +1343,56 @@
       "type": "text",
       "id": "default_postal_code",
       "label": "Postcode / ZIP"
+    },
+    {
+      "type": "header",
+      "content": "Rate display"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_delivery_dates",
+      "label": "Show delivery dates",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "Show rate description",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "max_rates",
+      "label": "Maximum rates shown",
+      "info": "Set to 0 to show all rates.",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "default": 5
+    },
+    {
+      "type": "select",
+      "id": "rates_sort",
+      "label": "Sort order",
+      "options": [
+        { "value": "default", "label": "Default (API order)" },
+        { "value": "price_asc", "label": "Price: low to high" },
+        { "value": "price_desc", "label": "Price: high to low" },
+        { "value": "delivery_asc", "label": "Delivery: soonest first" }
+      ],
+      "default": "default"
+    },
+    {
+      "type": "checkbox",
+      "id": "highlight_cheapest",
+      "label": "Badge: best price",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "highlight_fastest",
+      "label": "Badge: fastest delivery",
+      "default": false
     },
     {
       "type": "header",
