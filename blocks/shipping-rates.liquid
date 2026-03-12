@@ -821,16 +821,18 @@
         var originalLabel = btn.textContent;
         btn.textContent = '\u2026';
 
+        function restoreBtn() {
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+        }
         fetchRates(zip, false)
           .then(function () {
             if (advancedEl) advancedEl.removeAttribute('open');
+            restoreBtn();
           })
           .catch(function () {
             showError('Unable to retrieve shipping rates. Please try again.');
-          })
-          .finally(function () {
-            btn.disabled = false;
-            btn.textContent = originalLabel;
+            restoreBtn();
           });
       });
 
@@ -1117,6 +1119,7 @@
     gap: 0;
     padding: var(--sr-pad-xs) var(--sr-pad-sm);
     font-size: var(--sr-font-size);
+    background-color: var(--sr-fg-xfaint);
     background-color: color-mix(in srgb, var(--sr-fg) 3%, var(--sr-bg));
     border-top: 1px solid var(--sr-fg-faint);
   }
@@ -1167,11 +1170,13 @@
   }
 
   .shipping-rates__badge--cheapest {
+    background-color: var(--sr-fg-faint);
     background-color: color-mix(in srgb, var(--sr-accent) 15%, transparent);
     color: var(--sr-accent);
   }
 
   .shipping-rates__badge--fastest {
+    background-color: var(--sr-fg-faint);
     background-color: color-mix(in srgb, var(--sr-fg) 12%, transparent);
     color: var(--sr-fg);
   }
@@ -1459,7 +1464,7 @@
       "max": 24,
       "step": 1,
       "unit": "px",
-      "default": 14
+      "default": 4
     },
     {
       "type": "header",
