@@ -159,6 +159,9 @@
 
       var productTitle = {{ product_resource.title | json }};
       var currentVariantId = {{ variant.id }};
+      var variantsById = {};
+      {% for v in product_resource.variants %}variantsById[{{ v.id }}] = { id: {{ v.id }}, title: {{ v.title | json }}, price: {{ v.price }}, grams: {{ v.weight }}, sku: {{ v.sku | json }}, requires_shipping: {{ v.requires_shipping }}, taxable: {{ v.taxable }}, available: {{ v.available }}, fulfillment_service: {{ v.fulfillment_service | json }} };
+      {% endfor %}
 
       // Customer's Shopify default address (null when logged out or no address saved).
       var customerAddress = {% if customer and customer.default_address and customer.default_address.zip != blank %}
@@ -410,35 +413,26 @@
       // Deduplicates changes from both signal sources below.
       function handleVariantChange(variantId) {
         var id = parseInt(variantId, 10);
-        console.log('[JsRates] variant change:', variantId, '| current:', currentVariantId, '| postal_code:', rateData.rate.destination.postal_code);
-        if (!id || id === currentVariantId) { console.log('[JsRates] skipped (same or invalid)'); return; }
+        if (!id || id === currentVariantId) return;
+        var v = variantsById[id];
+        if (!v) return;
         currentVariantId = id;
-        fetch('/variants/' + id + '.json')
-          .then(function (r) { return r.json(); })
-          .then(function (data) {
-            var v = data.variant;
-            console.log('[JsRates] variant data:', v ? { id: v.id, requires_shipping: v.requires_shipping, available: v.available } : 'null');
-            if (!v) return;
-            container.hidden = !v.requires_shipping || !v.available;
-            rateData.rate.items[0].name = productTitle + (v.title && v.title !== 'Default Title' ? ' - ' + v.title : '');
-            rateData.rate.items[0].grams = v.grams || 0;
-            rateData.rate.items[0].price = v.price || 0;
-            rateData.rate.items[0].sku = v.sku || '';
-            rateData.rate.items[0].requires_shipping = v.requires_shipping;
-            rateData.rate.items[0].taxable = v.taxable;
-            rateData.rate.items[0].variant_id = v.id;
-            rateData.rate.order_totals.subtotal_price = v.price || 0;
-            rateData.rate.order_totals.total_price = v.price || 0;
-            clearError();
-            if (v.requires_shipping && v.available && rateData.rate.destination.postal_code) {
-              console.log('[JsRates] fetching rates for zip:', rateData.rate.destination.postal_code);
-              fetchRates(rateData.rate.destination.postal_code, false).catch(function (e) { console.error('[JsRates] fetchRates failed:', e); });
-            } else {
-              console.log('[JsRates] no rate fetch — requires_shipping:', v.requires_shipping, 'available:', v.available, 'postal_code:', rateData.rate.destination.postal_code);
-              resultsEl.hidden = true;
-            }
-          })
-          .catch(function (e) { console.error('[JsRates] /variants fetch failed:', e); });
+        container.hidden = !v.requires_shipping || !v.available;
+        rateData.rate.items[0].name = productTitle + (v.title && v.title !== 'Default Title' ? ' - ' + v.title : '');
+        rateData.rate.items[0].grams = v.grams || 0;
+        rateData.rate.items[0].price = v.price || 0;
+        rateData.rate.items[0].sku = v.sku || '';
+        rateData.rate.items[0].requires_shipping = v.requires_shipping;
+        rateData.rate.items[0].taxable = v.taxable;
+        rateData.rate.items[0].variant_id = v.id;
+        rateData.rate.order_totals.subtotal_price = v.price || 0;
+        rateData.rate.order_totals.total_price = v.price || 0;
+        clearError();
+        if (v.requires_shipping && v.available && rateData.rate.destination.postal_code) {
+          fetchRates(rateData.rate.destination.postal_code, false).catch(function () {});
+        } else {
+          resultsEl.hidden = true;
+        }
       }
 
       // Signal 1: Poll location.search for ?variant= changes (300ms).
@@ -446,12 +440,11 @@
         var lastSearch = location.search;
         setInterval(function () {
           if (location.search === lastSearch) return;
-          console.log('[JsRates] URL changed:', lastSearch, '→', location.search);
           lastSearch = location.search;
           try {
             var id = new URLSearchParams(location.search).get('variant');
             if (id) handleVariantChange(id);
-          } catch (e) { console.error('[JsRates] URL parse error:', e); }
+          } catch (e) {}
         }, 300);
       }());
 
