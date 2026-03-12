@@ -402,8 +402,13 @@
           var url = typeof input === 'string' ? input : (input && input.url) || '';
           var p = _fetch.apply(this, arguments);
           if (/\/cart\/(add|change|update|clear)/.test(url)) {
-            p.then(function () { cartCache.data = null; cartCache.promise = null; })
-             .catch(function () {});
+            p.then(function () {
+              cartCache.data = null;
+              cartCache.promise = null;
+              if (includeCartItems && rateData.rate.destination.postal_code) {
+                fetchRates(rateData.rate.destination.postal_code, false).catch(function () {});
+              }
+            }).catch(function () {});
           }
           return p;
         };
