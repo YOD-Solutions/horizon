@@ -392,7 +392,18 @@
 
       // --- Cart cache (only used when include_cart_items is enabled) ---
       // Cached until a cart-mutating request completes, then invalidated.
-      var includeCartItems = {{ block_settings.include_cart_items | json }};
+      var includeCartItems   = {{ block_settings.include_cart_items | json }};
+      var requireProvince    = {{ block_settings.require_province | json }};
+      var requireCity        = {{ block_settings.require_city | json }};
+      var requirePostalCode  = {{ block_settings.require_postal_code | json }};
+
+      function isAddressReady() {
+        if (requireProvince   && !rateData.rate.destination.province)     return false;
+        if (requireCity       && !rateData.rate.destination.city)         return false;
+        if (requirePostalCode && !rateData.rate.destination.postal_code)  return false;
+        return true;
+      }
+
       var cartCache = { data: null, promise: null };
 
       // Invalidate cache whenever any cart mutation endpoint responds.
@@ -405,7 +416,7 @@
             p.then(function () {
               cartCache.data = null;
               cartCache.promise = null;
-              if (includeCartItems && rateData.rate.destination.postal_code) {
+              if (includeCartItems && isAddressReady()) {
                 fetchRates(rateData.rate.destination.postal_code, false).catch(function () {});
               }
             }).catch(function () {});
@@ -559,7 +570,7 @@
         rateData.rate.order_totals.subtotal_price = v.price || 0;
         rateData.rate.order_totals.total_price = v.price || 0;
         clearError();
-        if (v.requires_shipping && v.available && rateData.rate.destination.postal_code) {
+        if (v.requires_shipping && v.available && isAddressReady()) {
           fetchRates(rateData.rate.destination.postal_code, false).catch(function () {});
         } else {
           resultsEl.hidden = true;
@@ -601,7 +612,7 @@
           rateData.rate.items[0].quantity = qty;
           rateData.rate.order_totals.subtotal_price = rateData.rate.items[0].price * qty;
           rateData.rate.order_totals.total_price    = rateData.rate.items[0].price * qty;
-          if (rateData.rate.items[0].requires_shipping && rateData.rate.destination.postal_code) {
+          if (rateData.rate.items[0].requires_shipping && isAddressReady()) {
             fetchRates(rateData.rate.destination.postal_code, false).catch(function () {});
           }
         }
@@ -1086,6 +1097,28 @@
       "type": "checkbox",
       "id": "show_zip",
       "label": "Show postcode / ZIP",
+      "default": true
+    },
+    {
+      "type": "paragraph",
+      "content": "Required fields — check which fields must be filled before rates are calculated. Match these to your JsRates shipping rules."
+    },
+    {
+      "type": "checkbox",
+      "id": "require_province",
+      "label": "State / province required",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "require_city",
+      "label": "City required",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "require_postal_code",
+      "label": "Postcode / ZIP required",
       "default": true
     },
     {
