@@ -41,21 +41,54 @@
       --sr-accent-fg:     {{ block_settings.button_text_color }};
     "
     {{ block.shopify_attributes }}
-    {% unless variant.requires_shipping and variant.available %}hidden{% endunless %}
+    {% unless variant.requires_shipping and variant.available %}
+      hidden
+    {% endunless %}
   >
     {% if block_settings.heading != blank %}
-      <p class="shipping-rates__heading{% if block_settings.heading_bold %} shipping-rates__heading--bold{% endif %}">{{ block_settings.heading | escape }}</p>
+      <p class="shipping-rates__heading{% if block_settings.heading_bold %} shipping-rates__heading--bold{% endif %}">
+        {{ block_settings.heading | escape }}
+      </p>
     {% endif %}
 
     <form class="shipping-rates__form" id="jsrates-form-{{ block.id }}" novalidate>
       <details class="shipping-rates__advanced" id="jsrates-advanced-{{ block.id }}">
         <summary class="shipping-rates__advanced-summary">
-          <svg class="shipping-rates__map-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg
+            class="shipping-rates__map-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
             <circle cx="12" cy="10" r="3"/>
           </svg>
-          <span class="shipping-rates__address-text">{% if block_settings.address_prefix != blank %}<span class="shipping-rates__address-prefix">{{ block_settings.address_prefix | escape }} </span>{% endif %}<span class="shipping-rates__address-summary" id="jsrates-address-display-{{ block.id }}"></span></span>
-          <svg class="shipping-rates__edit-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <span class="shipping-rates__address-text">
+            {%- if block_settings.address_prefix != blank -%}
+              <span class="shipping-rates__address-prefix">{{ block_settings.address_prefix | escape }} </span>
+            {%- endif -%}
+            <span class="shipping-rates__address-summary" id="jsrates-address-display-{{ block.id }}"></span
+          ></span>
+          <svg
+            class="shipping-rates__edit-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
             <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
           </svg>
         </summary>
@@ -67,8 +100,12 @@
                 {% for country in localization.available_countries %}
                   <option
                     value="{{ country.iso_code }}"
-                    {% if country.iso_code == default_country %}selected{% endif %}
-                  >{{ country.name }}</option>
+                    {% if country.iso_code == default_country %}
+                      selected
+                    {% endif %}
+                  >
+                    {{ country.name }}
+                  </option>
                 {% endfor %}
               </select>
             </div>
@@ -126,7 +163,6 @@
     <div class="shipping-rates__results" id="jsrates-results-{{ block.id }}" hidden>
       <ul class="shipping-rates__list" id="jsrates-list-{{ block.id }}"></ul>
     </div>
-
   </div>
 
   <script>
@@ -689,21 +725,21 @@
   */
   .shipping-rates {
     /* spacing */
-    --sr-gap-xs:       4px;
-    --sr-gap-sm:       8px;
-    --sr-pad-2xs:      4px;
-    --sr-pad-xs:       8px;
-    --sr-pad-sm:       12px;
+    --sr-gap-xs: 4px;
+    --sr-gap-sm: 8px;
+    --sr-pad-2xs: 4px;
+    --sr-pad-xs: 8px;
+    --sr-pad-sm: 12px;
     --sr-input-height: 40px;
     /* type scale — all em values are relative to the 0.9375em container base */
-    --sr-font-size:    1em;       /* ~15px: inputs, selects, rate rows  */
-    --sr-font-size-sm: 0.8em;     /* ~12px: labels, address, error      */
-    --sr-font-size-md: 1.133em;   /* ~17px: heading                     */
-    --sr-line-height:  1.5;
-    --sr-bold:         700;
-    --sr-medium:       500;
+    --sr-font-size: 1em; /* ~15px: inputs, selects, rate rows  */
+    --sr-font-size-sm: 0.8em; /* ~12px: labels, address, error      */
+    --sr-font-size-md: 1.133em; /* ~17px: heading                     */
+    --sr-line-height: 1.5;
+    --sr-bold: 700;
+    --sr-medium: 500;
 
-    font-size: 0.9375em;  /* compact base — slightly below theme body size */
+    font-size: 0.9375em; /* compact base — slightly below theme body size */
     font-family: inherit;
     display: grid;
     gap: var(--sr-gap-sm);
@@ -944,7 +980,7 @@
       "id": "include_cart_items",
       "label": "Include cart items",
       "info": "Calculate shipping for the full cart plus this product, not just this product alone.",
-      "default": false
+      "default": true
     },
     {
       "type": "header",
