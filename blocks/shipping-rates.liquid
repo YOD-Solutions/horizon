@@ -1256,9 +1256,21 @@
     pointer-events: none;
   }
 
+  /* Match primary row height to real text: font-size × line-height */
+  .shipping-rates__item--skeleton .shipping-rates__rate-primary {
+    min-height: calc(var(--sr-font-size) * var(--sr-line-height));
+    align-items: center;
+  }
+
+  /* Match secondary row height to real small text */
+  .shipping-rates__item--skeleton .shipping-rates__rate-secondary {
+    min-height: calc(var(--sr-font-size-sm) * var(--sr-line-height));
+    align-items: center;
+  }
+
   .shipping-rates__skeleton {
     display: inline-block;
-    height: 0.75em;
+    height: 0.7em;
     border-radius: 3px;
     background-color: var(--sr-fg-faint);
     animation: sr-skeleton-pulse 1.4s ease-in-out infinite;
