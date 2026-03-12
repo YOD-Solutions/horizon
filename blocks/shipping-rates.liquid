@@ -158,6 +158,7 @@
       var countriesData = {};
 
       var productTitle = {{ product_resource.title | json }};
+      var currentVariantId = {{ variant.id }};
 
       // Customer's Shopify default address (null when logged out or no address saved).
       var customerAddress = {% if customer and customer.default_address and customer.default_address.zip != blank %}
@@ -406,47 +407,71 @@
       // --- Variant sync ---
       var container = form.closest('.shipping-rates');
       // --- Variant sync (theme-agnostic) ---
-      // Every Shopify theme updates input[name="id"] when a variant changes.
-      // We intercept its value setter so we catch programmatic updates that
-      // don't fire a DOM change event, then fetch full data from /variants/{id}.json.
-      (function () {
-        var productSection = container.closest('[data-section-id]') || container.closest('section') || document;
-        var variantInput = productSection.querySelector('input[name="id"]');
-        if (!variantInput) return;
-
-        var proto = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
-        Object.defineProperty(variantInput, 'value', {
-          get: proto.get,
-          set: function (val) {
-            var prev = proto.get.call(this);
-            proto.set.call(this, val);
-            if (String(val) !== String(prev) && val) {
-              fetch('/variants/' + val + '.json')
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                  var v = data.variant;
-                  if (!v) return;
-                  container.hidden = !v.requires_shipping || !v.available;
-                  rateData.rate.items[0].name = productTitle + (v.title && v.title !== 'Default Title' ? ' - ' + v.title : '');
-                  rateData.rate.items[0].grams = v.grams || 0;
-                  rateData.rate.items[0].price = v.price || 0;
-                  rateData.rate.items[0].sku = v.sku || '';
-                  rateData.rate.items[0].requires_shipping = v.requires_shipping;
-                  rateData.rate.items[0].taxable = v.taxable;
-                  rateData.rate.items[0].variant_id = v.id;
-                  rateData.rate.order_totals.subtotal_price = v.price || 0;
-                  rateData.rate.order_totals.total_price = v.price || 0;
-                  clearError();
-                  if (v.requires_shipping && v.available && rateData.rate.destination.postal_code) {
-                    fetchRates(rateData.rate.destination.postal_code, false).catch(function () {});
-                  } else {
-                    resultsEl.hidden = true;
-                  }
-                })
-                .catch(function () {});
+      // Deduplicates changes from both signal sources below.
+      function handleVariantChange(variantId) {
+        var id = parseInt(variantId, 10);
+        if (!id || id === currentVariantId) return;
+        currentVariantId = id;
+        fetch('/variants/' + id + '.json')
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var v = data.variant;
+            if (!v) return;
+            container.hidden = !v.requires_shipping || !v.available;
+            rateData.rate.items[0].name = productTitle + (v.title && v.title !== 'Default Title' ? ' - ' + v.title : '');
+            rateData.rate.items[0].grams = v.grams || 0;
+            rateData.rate.items[0].price = v.price || 0;
+            rateData.rate.items[0].sku = v.sku || '';
+            rateData.rate.items[0].requires_shipping = v.requires_shipping;
+            rateData.rate.items[0].taxable = v.taxable;
+            rateData.rate.items[0].variant_id = v.id;
+            rateData.rate.order_totals.subtotal_price = v.price || 0;
+            rateData.rate.order_totals.total_price = v.price || 0;
+            clearError();
+            if (v.requires_shipping && v.available && rateData.rate.destination.postal_code) {
+              fetchRates(rateData.rate.destination.postal_code, false).catch(function () {});
+            } else {
+              resultsEl.hidden = true;
             }
-          }
-        });
+          })
+          .catch(function () {});
+      }
+
+      // Signal 1: URL ?variant= parameter (most themes update the URL on variant change)
+      function checkUrlForVariant(url) {
+        try {
+          var params = new URLSearchParams(new URL(String(url), location.origin).search);
+          var id = params.get('variant');
+          if (id) handleVariantChange(id);
+        } catch (e) {}
+      }
+      ['pushState', 'replaceState'].forEach(function (method) {
+        var original = history[method];
+        history[method] = function (state, title, url) {
+          original.apply(this, arguments);
+          if (url) checkUrlForVariant(url);
+        };
+      });
+      window.addEventListener('popstate', function () {
+        checkUrlForVariant(location.href);
+      });
+
+      // Signal 2: input[name="id"] setter — fallback for themes that skip URL updates
+      (function () {
+        try {
+          var productSection = container.closest('[data-section-id]') || container.closest('section') || document;
+          var variantInput = productSection.querySelector('input[name="id"]')
+                          || document.querySelector('form[action*="/cart/add"] input[name="id"]');
+          if (!variantInput) return;
+          var proto = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+          Object.defineProperty(variantInput, 'value', {
+            get: proto.get,
+            set: function (val) {
+              proto.set.call(this, val);
+              if (val) handleVariantChange(val);
+            }
+          });
+        } catch (e) {}
       }());
 
       // --- Manual submit ---
