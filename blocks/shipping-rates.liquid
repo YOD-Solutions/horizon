@@ -666,7 +666,9 @@
       form.addEventListener('submit', function (e) {
         e.preventDefault();
         var zip = input.value.trim();
-        if (!zip) {
+        var country = countriesData[rateData.rate.destination.country];
+        var zipRequired = country ? country.zip_required : true;
+        if (zipRequired && !zip) {
           showError('Please enter a postcode or ZIP code.');
           return;
         }
