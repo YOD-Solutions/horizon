@@ -113,7 +113,7 @@
 
           {% if block_settings.show_province %}
             <div class="shipping-rates__field" id="jsrates-province-group-{{ block.id }}" hidden>
-              <label class="shipping-rates__field-label" for="jsrates-province-{{ block.id }}">State / Province</label>
+              <label class="shipping-rates__field-label" id="jsrates-province-label-{{ block.id }}" for="jsrates-province-{{ block.id }}">State / Province</label>
               <select class="shipping-rates__select" id="jsrates-province-{{ block.id }}">
                 <option value="">Select...</option>
               </select>
@@ -134,8 +134,8 @@
           {% endif %}
 
           {% if block_settings.show_zip %}
-            <div class="shipping-rates__field">
-              <label class="shipping-rates__field-label" for="jsrates-zip-{{ block.id }}">
+            <div class="shipping-rates__field" id="jsrates-zip-field-{{ block.id }}">
+              <label class="shipping-rates__field-label" id="jsrates-zip-label-{{ block.id }}" for="jsrates-zip-{{ block.id }}">
                 {{ block_settings.label | default: 'Postcode / ZIP' | escape }}
               </label>
               <input
@@ -178,7 +178,10 @@
       var countryEl        = document.getElementById('jsrates-country-'         + blockId);
       var provinceGrpEl    = document.getElementById('jsrates-province-group-'  + blockId);
       var provinceEl       = document.getElementById('jsrates-province-'        + blockId);
+      var provinceLabelEl  = document.getElementById('jsrates-province-label-'  + blockId);
       var cityEl           = document.getElementById('jsrates-city-'            + blockId);
+      var zipFieldEl       = document.getElementById('jsrates-zip-field-'       + blockId);
+      var zipLabelEl       = document.getElementById('jsrates-zip-label-'       + blockId);
 
       var STORAGE_KEY    = 'jsrates_destination';
       var currencySymbol = {{ localization.country.currency.symbol | json }};
@@ -360,6 +363,15 @@
         }
       }
 
+      function updateFieldLabels(countryCode) {
+        var c = countriesData[countryCode];
+        if (!c) return;
+        if (zipFieldEl)      zipFieldEl.hidden      = !c.zip_required;
+        if (zipLabelEl)      zipLabelEl.textContent = c.zip_label;
+        if (input)           input.placeholder      = c.zip_placeholder;
+        if (provinceLabelEl) provinceLabelEl.textContent = c.province_label;
+      }
+
       // --- Set full address from a destination object ---
       // Priority: only apply a field if it has a non-empty value.
       // If detected country is not in available countries, keep current.
@@ -534,6 +546,7 @@
         countryEl.addEventListener('change', function () {
           rateData.rate.destination.country = this.value;
           rateData.rate.destination.province = null;
+          updateFieldLabels(this.value);
           populateProvinces(this.value, null);
         });
       }
@@ -703,6 +716,7 @@
 
       // --- Initialise and auto-load (after province data is ready) ---
       function init() {
+        updateFieldLabels(rateData.rate.destination.country);
         populateProvinces(rateData.rate.destination.country, rateData.rate.destination.province);
         if (cityEl && rateData.rate.destination.city) cityEl.value = rateData.rate.destination.city;
         if (!input.value && rateData.rate.destination.postal_code) input.value = rateData.rate.destination.postal_code;
@@ -758,7 +772,10 @@
             var c = raw[countryName];
             var codes = c.province_codes || {};
             countriesData[c.code] = {
-              zip_required: c.zip_required !== false,
+              zip_required:    c.zip_required !== false,
+              zip_label:       c.zip_label       || 'Postcode / ZIP',
+              zip_placeholder: c.zip_placeholder || '',
+              province_label:  c.province_label  || c.checkout_zone_label || 'State / Province',
               provinces: (c.provinces || []).map(function(name) {
                 return { name: name, code: codes[name] || name };
               })
