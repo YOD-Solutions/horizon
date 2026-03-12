@@ -474,6 +474,42 @@
           if (e.target && e.target.name === 'id') handleVariantChange(e.target.value);
         });
 
+        // --- Quantity sync ---
+        function handleQuantityChange(qty) {
+          qty = parseInt(qty, 10);
+          if (!qty || qty < 1) return;
+          if (qty === rateData.rate.items[0].quantity) return;
+          rateData.rate.items[0].quantity = qty;
+          rateData.rate.order_totals.subtotal_price = rateData.rate.items[0].price * qty;
+          rateData.rate.order_totals.total_price    = rateData.rate.items[0].price * qty;
+          if (rateData.rate.items[0].requires_shipping && rateData.rate.destination.postal_code) {
+            fetchRates(rateData.rate.destination.postal_code, false).catch(function () {});
+          }
+        }
+
+        // Quantity signal A: change event — covers typed input and most stepper buttons.
+        productSection.addEventListener('change', function (e) {
+          if (e.target && e.target.name === 'quantity') handleQuantityChange(e.target.value);
+        });
+
+        // Quantity signal B: setter intercept — covers stepper buttons that update
+        // the input programmatically without firing a change event.
+        try {
+          var qtyInput = productSection.querySelector('input[name="quantity"]')
+                      || document.querySelector('form[action*="/cart/add"] input[name="quantity"]');
+          if (qtyInput) {
+            var qtyProto = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+            Object.defineProperty(qtyInput, 'value', {
+              configurable: true,
+              get: qtyProto.get,
+              set: function (val) {
+                qtyProto.set.call(this, val);
+                handleQuantityChange(val);
+              }
+            });
+          }
+        } catch (e) {}
+
         // Signal 3: history intercept — catches pushState/replaceState calls.
         // Covers Horizon, Dawn, and any theme that updates ?variant= in the URL.
         (function () {
