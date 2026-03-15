@@ -68,6 +68,45 @@
             "padding-inline-end": 0
           },
           "blocks": {
+            "jsrates_custom_shipping_rates_product_page_widget_7EBzXn": {
+              "type": "shopify://apps/jsrates-custom-shipping-rates/blocks/product_page_widget/019cef42-a91d-7db1-b834-40943d0fe4a4",
+              "settings": {
+                "api_key": "1d6a3bc8721760288ddbb1d271d3bfbcb66e59ce49dd9c94eb203666442f36cc",
+                "include_cart_items": true,
+                "apply_currency_rounding": true,
+                "address_prefix": "Delivering to",
+                "show_country": true,
+                "show_province": true,
+                "show_city": false,
+                "show_zip": true,
+                "require_province": false,
+                "require_city": false,
+                "default_country_code": "",
+                "default_province_code": "",
+                "default_city": "",
+                "default_postal_code": "",
+                "show_delivery_dates": true,
+                "show_description": true,
+                "max_rates": 2,
+                "rates_sort": "delivery_asc",
+                "highlight_cheapest": true,
+                "highlight_fastest": true,
+                "text_color": "#1a1a1a",
+                "background_color": "#f9f9f9",
+                "border_width": 1,
+                "border_color": "#e0e0e0",
+                "border_radius": 4,
+                "font_size": 95,
+                "button_background": "#1a1a1a",
+                "button_text_color": "#ffffff",
+                "margin-block-start": 0,
+                "margin-block-end": 0,
+                "padding-block-start": 10,
+                "padding-block-end": 10,
+                "padding-inline-start": 10,
+                "padding-inline-end": 10
+              }
+            },
             "group_icgrde": {
               "type": "group",
               "name": "Header",
@@ -250,6 +289,7 @@
             }
           },
           "block_order": [
+            "jsrates_custom_shipping_rates_product_page_widget_7EBzXn",
             "group_icgrde",
             "divider_VJhene",
             "variant_picker_R3rGDr",
